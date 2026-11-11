@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Literal
 
 import docx
-import fitz
+import pymupdf
 
 from app.core.exceptions import ValidationError
 
@@ -127,12 +127,12 @@ def extract_text_from_document(
 
 def _extract_pdf_text(*, data: bytes, max_pages: int) -> ParsedDocument:
     try:
-        doc = fitz.open(stream=data, filetype="pdf")
+        doc = pymupdf.open(stream=data, filetype="pdf")  # type: ignore[no-untyped-call]
     except Exception as exc:
         raise ValidationError("Failed to parse PDF document.") from exc
 
     try:
-        page_count = doc.page_count
+        page_count = int(doc.page_count)
         if page_count == 0:
             raise ValidationError("PDF document contains no pages.")
         if page_count > max_pages:
@@ -141,12 +141,13 @@ def _extract_pdf_text(*, data: bytes, max_pages: int) -> ParsedDocument:
             )
 
         pages: list[str] = []
-        for page in doc:
+        for idx in range(page_count):
+            page = doc.load_page(idx)  # type: ignore[no-untyped-call]
             text = str(page.get_text("text")).strip()
             if text:
                 pages.append(text)
     finally:
-        doc.close()
+        doc.close()  # type: ignore[no-untyped-call]
 
     combined = "\n\n".join(pages).strip()
     if not combined:
