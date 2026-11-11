@@ -5,6 +5,8 @@ import { ProtectedRoute } from "../../features/authentication/components/Protect
 import { LoginPage } from "../../features/authentication/pages/LoginPage";
 import { FoundationStatusPage } from "../../features/dashboard/pages/FoundationStatusPage";
 import { ProfilePage } from "../../features/profile/pages/ProfilePage";
+import { ResumeAnalysisPage } from "../../features/resume/pages/ResumeAnalysisPage";
+import { ResumesPage } from "../../features/resume/pages/ResumesPage";
 
 export function AppRouter() {
   return (
@@ -26,6 +28,26 @@ export function AppRouter() {
           <ProtectedRoute>
             <AppShell>
               <ProfilePage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/resumes"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <ResumesPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/resumes/:resumeId"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <ResumeAnalysisPage />
             </AppShell>
           </ProtectedRoute>
         }

@@ -9,11 +9,15 @@
 ## Implemented Tables
 
 ### Phase 1 (`20261110_0001`)
-- `audit_logs`: Immutable security and workflow event log (`id`, `user_id`, `event_type`, `resource_type`, `resource_id`, `request_id`, `ip_address`, `details`, `created_at`).
+- `audit_logs`: Immutable security and workflow event log.
 
 ### Phase 2 (`20261111_0002`)
-- `users`: Registered accounts (`id`, `email` unique, `full_name`, `avatar_url`, `oauth_provider`, `oauth_subject`, unique `(oauth_provider, oauth_subject)`, `is_active`, `timezone`, `last_login_at`, `created_at`, `updated_at`).
-- `oauth_states`: Single-use short-lived OAuth state, OIDC nonce, and PKCE verifier records (`id`, `state_hash` unique, `nonce`, `code_verifier`, `redirect_to`, `expires_at`, `consumed_at`, `created_at`).
-- `user_sessions`: Revocable server-side sessions (`id`, `user_id` FK -> `users.id`, `token_hash` unique, `expires_at`, `revoked_at`, `is_demo_auth`, `user_agent`, `ip_address`, `created_at`).
-- `user_profiles`: Structured career profile and consent preferences (`id`, `user_id` unique FK -> `users.id`, `headline`, `summary`, `phone`, `location`, `university`, `degree`, `graduation_year`, `experience_level`, `years_of_experience`, `target_roles`, `preferred_locations`, `work_mode_preferences`, `linkedin_url`, `github_url`, `portfolio_url`, `ai_consent_given`, `notification_consent`, `profile_verified`, `extra_preferences`, `created_at`, `updated_at`).
-- `user_skills`: Normalized per-user skills (`id`, `user_id` FK -> `users.id`, `name`, `normalized_name`, `category`, `proficiency`, `years_experience`, `is_verified`, `source`, unique `(user_id, normalized_name, category)`, `created_at`, `updated_at`).
+- `users`: Registered user accounts with OAuth identity uniqueness and separate `timezone`.
+- `oauth_states`: Single-use short-lived OAuth CSRF state, OIDC nonce, and PKCE verifier records.
+- `user_sessions`: Revocable server-side sessions (`token_hash` unique, `revoked_at`, `expires_at`).
+- `user_profiles`: Structured career profile, job preferences, and AI/notification consent flags.
+- `user_skills`: Normalized per-user skills (`unique (user_id, normalized_name, category)`).
+
+### Phase 3 (`20261111_0003`)
+- `resumes`: Uploaded resume metadata (`id`, `user_id` FK -> `users.id`, `original_filename`, `storage_key` unique, `content_type`, `file_extension`, `file_size_bytes`, `sha256_hash`, `page_count`, `extracted_text`, `parse_status`, `error_message`, `completeness_score`, `analysis_summary`, `analyzed_at`, `created_at`, `updated_at`).
+- `resume_facts`: Extracted facts awaiting or holding verification (`id`, `resume_id` FK -> `resumes.id`, `user_id` FK -> `users.id`, `fact_type`, `title`, `organization`, `start_date`, `end_date`, `description`, `structured_data`, `source_section`, `evidence_excerpt`, `confidence`, `verification_status`, `is_verified`, `verified_at`, `created_at`, `updated_at`).
