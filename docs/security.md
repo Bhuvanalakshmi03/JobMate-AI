@@ -7,13 +7,13 @@
 - **Development Auth Guard:** `DEV_AUTH_ENABLED=true` is rejected by `Settings` validation in `staging` and `production`.
 
 ## Authorization & Data Isolation
-- Every query in `ProfileRepository`, `SkillRepository`, `ResumeRepository`, `ResumeFactRepository`, `SavedJobRepository`, and `JobMatchRepository` scopes strictly to `current_user.id`.
+- Every query across `profile`, `resume`, `jobs/saved`, `matching`, and `documents` repositories scopes strictly to `current_user.id`.
 
-## Resume Upload, Storage & AI Security
-- **File Validation:** Enforces `.pdf`/`.docx` extensions, size/page bounds, MIME checks, binary magic signatures, and DOCX zip-bomb bounds.
-- **Private Storage:** Originals are saved under UUID-based keys via `LocalPrivateStorage` with strict path-traversal rejection and `O_EXCL` non-overwriting creation.
-- **AI Prompt Injection & Fact Grounding:** Resume text is isolated inside `<untrusted_resume_text>` delimiters; `ResumeExtractionValidator` validates schemas and grounds excerpts against extracted text.
-- **Job Discovery Integrity & Fair Matching:** `OpenAIWebSearchJobProvider` filters out invalid/placeholder URLs and treats external job descriptions as untrusted data. Job matching uses configurable deterministic weights + semantic similarity without sensitive personal attributes or proxies.
+## Resume, Job & Document AI Security
+- **File Validation & Private Storage:** Validates `.pdf`/`.docx` extensions, size/page bounds, MIME types, magic bytes, and zip-bomb bounds; saves originals under non-overwriting UUID paths without execution.
+- **Anti-Hallucination & Factuality Gate:** Document generation loads ONLY verified `resume_facts` (`is_verified=True` and `verification_status != "rejected"`), verified `user_skills`, and `user_profiles`. `DocumentFactualityValidator` blocks any generated resume/letter/note containing unverified employers, unverified skills, or invented numerical metrics (`%`, `$`, `x`).
+- **Prompt Injection Defense:** Both untrusted resume text and scraped job descriptions are isolated inside explicit delimiters with instruction-ignoring rules.
+- **Safe Export Rendering:** ATS PDF HTML templates escape all user text via `html.escape`, and download headers sanitize filenames.
 
 ## Input Validation & Logging
 - IANA timezones validated via `zoneinfo.ZoneInfo`; external links restricted to `http://` and `https://`.

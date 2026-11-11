@@ -90,6 +90,12 @@ export function JobDetailsPage() {
                   Apply Externally
                   <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                 </a>
+                <Link
+                  to={`/documents?jobId=${job.id}`}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+                >
+                  Tailor Documents
+                </Link>
               </div>
             }
           >

@@ -4,6 +4,8 @@ import { AppShell } from "../../components/layout/AppShell";
 import { ProtectedRoute } from "../../features/authentication/components/ProtectedRoute";
 import { LoginPage } from "../../features/authentication/pages/LoginPage";
 import { FoundationStatusPage } from "../../features/dashboard/pages/FoundationStatusPage";
+import { DocumentEditorPage } from "../../features/documents/pages/DocumentEditorPage";
+import { DocumentsPage } from "../../features/documents/pages/DocumentsPage";
 import { JobDetailsPage } from "../../features/jobs/pages/JobDetailsPage";
 import { JobsPage } from "../../features/jobs/pages/JobsPage";
 import { ProfilePage } from "../../features/profile/pages/ProfilePage";
@@ -70,6 +72,26 @@ export function AppRouter() {
           <ProtectedRoute>
             <AppShell>
               <JobDetailsPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/documents"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <DocumentsPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/documents/:documentId"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <DocumentEditorPage />
             </AppShell>
           </ProtectedRoute>
         }
