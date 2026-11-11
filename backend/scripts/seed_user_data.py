@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import uuid
 from datetime import timedelta
 from typing import Any
@@ -41,7 +42,7 @@ from app.modules.matching.service import JobMatchingService
 from app.modules.memory.models import CareerMemory
 from app.modules.profile.models import UserProfile, UserSkill
 from app.modules.reminders.models import Reminder
-from app.modules.resume.models import Resume
+from app.modules.resume.models import Resume, ResumeFact
 
 CURATED_REALISTIC_JOBS: tuple[dict[str, Any], ...] = (
     {
@@ -719,7 +720,7 @@ async def _ensure_workflow_approvals_and_chat(
                 user_id=user.id,
                 role="assistant",
                 content=(
-                    "Welcome back, **MUKILAN S**! Your JobMate AI workspace is loaded with "
+                    f"Welcome back, **{user.full_name}**! Your JobMate AI workspace is loaded with "
                     "real pipeline data:\n\n"
                     "- **Active Applications**: Zoho Corporation (`INTERVIEW_SCHEDULED`), "
                     "Freshworks (`AWAITING_APPROVAL`), Xtract.io (`SUBMITTED`), Chargebee "
@@ -1033,23 +1034,202 @@ async def _ensure_phase8_and_9_records(
             )
 
 
-async def seed_user_workspace(email: str) -> dict[str, Any]:
+def _derive_default_full_name(email: str) -> str:
+    local = email.split("@", 1)[0]
+    cleaned = "".join(ch if ch.isalpha() or ch in (" ", ".", "_", "-") else " " for ch in local)
+    words = [w for w in cleaned.replace(".", " ").replace("_", " ").replace("-", " ").split() if w]
+    return " ".join(word.capitalize() for word in words) or "JobMate Candidate"
+
+
+async def _ensure_demo_resume_if_none(
+    session: AsyncSession,
+    *,
+    user: User,
+) -> Resume:
+    existing = await session.scalar(
+        select(Resume)
+        .where(Resume.user_id == user.id)
+        .order_by(Resume.created_at.desc())
+    )
+    if existing is not None:
+        return existing
+
+    now = utc_now()
+    sample_text = (
+        f"{user.full_name}\n"
+        f"{user.email} | Chennai, India\n"
+        "EDUCATION\n"
+        "B.E. Computer Science Engineering - Nadar Saraswathi College of Engineering "
+        "and Technology (2021 - 2025)\n"
+        "EXPERIENCE\n"
+        "Backend Developer & Team Lead - ParkQwik Private Limited\n"
+        "Software Engineer | AI/ML Team Member - Navi Promotions\n"
+        "Programmer | AI Team Member - SecureNext Software Pvt. Ltd\n"
+        "Full Stack Developer - Computira Soft Solutions\n"
+        "PROJECTS & AWARDS\n"
+        "EcoTrack - Smart India Hackathon Winning Project (Python, OpenCV, Deep Learning)\n"
+        "Dr. Kalam Young Achiever Award 2024\n"
+        "CERTIFICATIONS\n"
+        "Python 101 for Data Science; Full Stack Development (Infosys Springboard)\n"
+    )
+    digest = hashlib.sha256(f"{user.id}:{sample_text}".encode()).hexdigest()
+    slug_name = user.full_name.replace(" ", "_") or "Candidate"
+    resume = Resume(
+        user_id=user.id,
+        original_filename=f"{slug_name}_Demo_Resume.pdf",
+        storage_key=f"seeded/{user.id}/demo_resume.pdf",
+        content_type="application/pdf",
+        file_extension="pdf",
+        file_size_bytes=len(sample_text.encode("utf-8")),
+        sha256_hash=digest,
+        page_count=1,
+        extracted_text=sample_text,
+        parse_status="analyzed",
+        completeness_score=90.0,
+        analysis_summary={
+            "overall_score": 90,
+            "summary": (
+                "Strong entry-level full-stack and AI/ML engineering foundation with verified "
+                "project impact and internship leadership."
+            ),
+            "strengths": [
+                "Hands-on Python, FastAPI, React.js, PostgreSQL, and OpenCV experience",
+                "Smart India Hackathon winning project (EcoTrack)",
+            ],
+            "improvements": [
+                "Quantify backend API latency and inference throughput metrics further",
+            ],
+        },
+        analyzed_at=now,
+    )
+    session.add(resume)
+    await session.flush()
+
+    fact_specs: tuple[dict[str, Any], ...] = (
+        {
+            "fact_type": "education",
+            "title": "B.E. Computer Science Engineering",
+            "organization": "Nadar Saraswathi College of Engineering and Technology",
+            "start_date": "2021",
+            "end_date": "2025",
+            "description": "Undergraduate degree in Computer Science and Engineering.",
+            "source_section": "Education",
+        },
+        {
+            "fact_type": "experience",
+            "title": "Backend Developer & Team Lead",
+            "organization": "ParkQwik Private Limited",
+            "start_date": "2024",
+            "end_date": "2025",
+            "description": "Led backend Python/FastAPI service development and API workflows.",
+            "source_section": "Experience",
+        },
+        {
+            "fact_type": "experience",
+            "title": "Software Engineer | AI/ML Team Member",
+            "organization": "Navi Promotions",
+            "start_date": "2024",
+            "end_date": "2024",
+            "description": "Built applied AI/ML automation pipelines and full-stack integrations.",
+            "source_section": "Experience",
+        },
+        {
+            "fact_type": "internship",
+            "title": "Programmer | AI Team Member",
+            "organization": "SecureNext Software Pvt. Ltd",
+            "start_date": "2023",
+            "end_date": "2024",
+            "description": "Developed Python AI modules and backend automation tools.",
+            "source_section": "Experience",
+        },
+        {
+            "fact_type": "project",
+            "title": "EcoTrack (Smart India Hackathon Winning Project)",
+            "organization": "Smart India Hackathon",
+            "start_date": "2024",
+            "end_date": "2024",
+            "description": "Computer-vision & Deep Learning pipeline built with Python and OpenCV.",
+            "source_section": "Projects",
+        },
+        {
+            "fact_type": "certification",
+            "title": "Python 101 for Data Science & Full Stack Development",
+            "organization": "Infosys Springboard",
+            "start_date": "2023",
+            "end_date": "2024",
+            "description": "Completed certified Python data science and full-stack coursework.",
+            "source_section": "Certifications",
+        },
+        {
+            "fact_type": "achievement",
+            "title": "Dr. Kalam Young Achiever Award 2024",
+            "organization": "World Youth Federation",
+            "start_date": "2024",
+            "end_date": "2024",
+            "description": "Recognized for student innovation and EcoTrack project excellence.",
+            "source_section": "Awards",
+        },
+    )
+    for spec in fact_specs:
+        session.add(
+            ResumeFact(
+                resume_id=resume.id,
+                user_id=user.id,
+                fact_type=str(spec["fact_type"]),
+                title=str(spec["title"]),
+                organization=str(spec["organization"]),
+                start_date=str(spec["start_date"]),
+                end_date=str(spec["end_date"]),
+                description=str(spec["description"]),
+                structured_data={},
+                source_section=str(spec["source_section"]),
+                evidence_excerpt=str(spec["description"]),
+                confidence=0.95,
+                verification_status="verified",
+                is_verified=True,
+                verified_at=now,
+            )
+        )
+
+    await session.flush()
+    return resume
+
+
+async def seed_user_workspace(
+    email: str,
+    *,
+    create_if_missing: bool = False,
+    full_name: str | None = None,
+) -> dict[str, Any]:
     """Run idempotent seeding for the specified user account."""
     settings = get_settings()
     engine = create_db_engine(settings)
     session_factory = create_session_factory(engine)
+    normalized_email = email.strip().lower()
 
     try:
         async with session_factory() as session:
-            user = await session.scalar(select(User).where(User.email == email.lower()))
+            user = await session.scalar(select(User).where(User.email == normalized_email))
+            created_user = False
             if user is None:
-                raise RuntimeError(f"User with email '{email}' not found in database.")
+                if not create_if_missing:
+                    raise RuntimeError(f"User with email '{email}' not found in database.")
+                resolved_name = (full_name or "").strip() or _derive_default_full_name(
+                    normalized_email
+                )
+                user = User(
+                    email=normalized_email,
+                    full_name=resolved_name,
+                    oauth_provider="google",
+                    oauth_subject=f"pending-oauth:{normalized_email}",
+                    timezone="Asia/Kolkata",
+                    is_active=True,
+                )
+                session.add(user)
+                await session.flush()
+                created_user = True
 
-            source_resume = await session.scalar(
-                select(Resume)
-                .where(Resume.user_id == user.id)
-                .order_by(Resume.created_at.desc())
-            )
+            source_resume = await _ensure_demo_resume_if_none(session, user=user)
             await _ensure_profile_and_skills(session, user)
             jobs_by_company = await _upsert_curated_jobs(session)
 
@@ -1090,9 +1270,10 @@ async def seed_user_workspace(email: str) -> dict[str, Any]:
             return {
                 "email": user.email,
                 "user_id": str(user.id),
+                "created_user": created_user,
                 "matched_jobs": recommended.total,
                 "applications_seeded": len(apps_by_company),
-                "preserved_resume_id": str(source_resume.id) if source_resume else None,
+                "resume_id": str(source_resume.id),
                 "phase8_9_seeded": True,
             }
     finally:
@@ -1102,8 +1283,24 @@ async def seed_user_workspace(email: str) -> dict[str, Any]:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Seed realistic JobMate AI data for a user.")
     parser.add_argument("--email", default="mukilan069@gmail.com", help="Target user email.")
+    parser.add_argument(
+        "--create-if-missing",
+        action="store_true",
+        help="Pre-create a pending Google OAuth user row if the email has not logged in yet.",
+    )
+    parser.add_argument(
+        "--full-name",
+        default=None,
+        help="Full name used when creating a missing user account.",
+    )
     args = parser.parse_args()
-    summary = asyncio.run(seed_user_workspace(args.email))
+    summary = asyncio.run(
+        seed_user_workspace(
+            args.email,
+            create_if_missing=args.create_if_missing,
+            full_name=args.full_name,
+        )
+    )
     print("Seed completed:", summary)
 
 

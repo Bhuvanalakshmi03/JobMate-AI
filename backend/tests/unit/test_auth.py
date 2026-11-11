@@ -290,3 +290,50 @@ async def test_google_oauth_client_validates_nonce_issuer_and_verified_email(
     )
     assert identity.email == "u@edu.org"
     assert identity.subject == "sub-1"
+
+
+async def test_google_login_links_preseeded_pending_user_by_email(
+    migrated_test_app: FastAPI,
+) -> None:
+    from app.modules.authentication.models import User
+
+    fake_oauth = FakeGoogleOAuthProvider(
+        identity=OAuthIdentity(
+            provider="google",
+            subject="real-google-sub-bhuva",
+            email="bhuvanalakshmi312@gmail.com",
+            email_verified=True,
+            full_name="Bhuvanalakshmi",
+            avatar_url="https://example.com/bhuva.png",
+        )
+    )
+    migrated_test_app.dependency_overrides[get_oauth_provider] = lambda: fake_oauth
+
+    async with migrated_test_app.router.lifespan_context(migrated_test_app):
+        session_factory = migrated_test_app.state.db_session_factory
+        seeded_id = uuid.uuid4()
+        async with session_factory() as session:
+            session.add(
+                User(
+                    id=seeded_id,
+                    email="bhuvanalakshmi312@gmail.com",
+                    full_name="Bhuvanalakshmi",
+                    oauth_provider="google",
+                    oauth_subject="pending-oauth:bhuvanalakshmi312@gmail.com",
+                )
+            )
+            await session.commit()
+
+        transport = httpx.ASGITransport(app=migrated_test_app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            init_res = await client.get("/api/v1/auth/google?mode=json&redirect_to=/approvals")
+            assert init_res.status_code == 200
+            state = init_res.json()["state"]
+
+            cb_res = await client.get(
+                f"/api/v1/auth/google/callback?code=valid-auth-code&state={state}&mode=json"
+            )
+            assert cb_res.status_code == 200
+            payload = cb_res.json()
+            assert payload["user"]["id"] == str(seeded_id)
+            assert payload["user"]["email"] == "bhuvanalakshmi312@gmail.com"
