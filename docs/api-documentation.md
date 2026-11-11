@@ -15,17 +15,17 @@ All backend routes are versioned under `/api/v1`. Protected routes require a val
 - `GET /api/v1/auth/me` — Returns current authenticated user metadata.
 
 ## Profile & Skills Endpoints (Phase 2)
-- `GET /api/v1/profile` — Fetch authenticated user's career profile (`404` if not created).
-- `POST /api/v1/profile` — Create authenticated user's initial career profile (`409` if already exists).
-- `PUT /api/v1/profile` — Create or update career profile, preferences, timezone, and consent flags.
-- `GET /api/v1/profile/skills` — List authenticated user's normalized skills.
-- `PUT /api/v1/profile/skills` — Atomically replace and deduplicate authenticated user's skills.
+- `GET /api/v1/profile`, `POST /api/v1/profile`, `PUT /api/v1/profile` — Career profile CRUD and preferences.
+- `GET /api/v1/profile/skills`, `PUT /api/v1/profile/skills` — Normalized skills management.
 
 ## Resume Intelligence Endpoints (Phase 3)
-- `POST /api/v1/resumes/upload` — Validate file signature, size, and pages, store privately, and extract text (`201 Created`).
-- `GET /api/v1/resumes` — List uploaded resumes owned by the authenticated user.
-- `GET /api/v1/resumes/{resume_id}` — Fetch resume details, parsed text, and fact counts.
-- `POST /api/v1/resumes/{resume_id}/analyze` — Run AI extraction and analysis (caches unchanged analyzed resumes unless `?force=true`; supports `?async_mode=true` via Celery).
-- `GET /api/v1/resumes/{resume_id}/analysis` — Retrieve analysis summary and extracted facts for review.
-- `PATCH /api/v1/resumes/{resume_id}/facts` — Verify, edit, or reject extracted facts and optionally sync verified facts to `user_profiles` and `user_skills`.
-- `DELETE /api/v1/resumes/{resume_id}` — Delete resume metadata, facts, and stored file.
+- `POST /api/v1/resumes/upload`, `GET /api/v1/resumes`, `GET /api/v1/resumes/{resume_id}`, `POST /api/v1/resumes/{resume_id}/analyze`, `GET /api/v1/resumes/{resume_id}/analysis`, `PATCH /api/v1/resumes/{resume_id}/facts`, `DELETE /api/v1/resumes/{resume_id}`.
+
+## Job Discovery & Matching Endpoints (Phase 4)
+- `GET /api/v1/jobs/search` — Search cached/persisted jobs or run live OpenAI Web Search discovery (`q`, `location`, `work_mode`, `experience_level`, `skills`, `refresh`, `limit`, `offset`).
+- `GET /api/v1/jobs/recommended` — Rank active jobs using explainable weighted + semantic matching.
+- `GET /api/v1/jobs/saved` — List saved jobs for authenticated user.
+- `GET /api/v1/jobs/{job_id}` — Fetch full normalized job details, saved state, and match preview.
+- `POST /api/v1/jobs/{job_id}/match` — Compute and persist factor-by-factor explainable match score.
+- `POST /api/v1/jobs/{job_id}/save` — Bookmark a job for the authenticated user.
+- `DELETE /api/v1/jobs/{job_id}/save` — Remove a saved job bookmark.

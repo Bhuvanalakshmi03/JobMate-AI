@@ -1,4 +1,4 @@
-import { Compass, FileText, Layers, LogOut, ShieldCheck, UserCheck } from "lucide-react";
+import { Briefcase, Compass, FileText, Layers, LogOut, ShieldCheck, UserCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 
@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { to: "/", label: "System Foundation", icon: Layers },
   { to: "/profile", label: "Career Profile", icon: UserCheck },
   { to: "/resumes", label: "Resume Intelligence", icon: FileText },
+  { to: "/jobs", label: "Job Discovery", icon: Briefcase },
 ];
 
 export function AppShell({ children }: AppShellProps) {

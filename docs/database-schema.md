@@ -1,9 +1,9 @@
 # CareerPilot AI — Database Schema
 
 ## Primary Database Standards
-- **Engine:** External/managed PostgreSQL (SQLite is restricted to isolated unit tests and rejected in `staging`/`production` configuration validation).
+- **Engine:** External/managed PostgreSQL (SQLite restricted to unit tests).
 - **Primary Keys:** UUID v4 (`sqlalchemy.Uuid(as_uuid=True)`).
-- **Timestamps:** Stored in UTC (`UTCDateTime` / `TIMESTAMPTZ`). User timezone is stored separately in `users.timezone`.
+- **Timestamps:** Stored in UTC (`UTCDateTime` / `TIMESTAMPTZ`). User timezone stored separately in `users.timezone`.
 - **Migrations:** Managed exclusively through Alembic (`backend/app/database/migrations/`).
 
 ## Implemented Tables
@@ -19,5 +19,10 @@
 - `user_skills`: Normalized per-user skills (`unique (user_id, normalized_name, category)`).
 
 ### Phase 3 (`20261111_0003`)
-- `resumes`: Uploaded resume metadata (`id`, `user_id` FK -> `users.id`, `original_filename`, `storage_key` unique, `content_type`, `file_extension`, `file_size_bytes`, `sha256_hash`, `page_count`, `extracted_text`, `parse_status`, `error_message`, `completeness_score`, `analysis_summary`, `analyzed_at`, `created_at`, `updated_at`).
-- `resume_facts`: Extracted facts awaiting or holding verification (`id`, `resume_id` FK -> `resumes.id`, `user_id` FK -> `users.id`, `fact_type`, `title`, `organization`, `start_date`, `end_date`, `description`, `structured_data`, `source_section`, `evidence_excerpt`, `confidence`, `verification_status`, `is_verified`, `verified_at`, `created_at`, `updated_at`).
+- `resumes`: Uploaded resume metadata, extracted text, content hash, completeness score, and analysis summary.
+- `resume_facts`: Extracted facts with source section, evidence excerpt, confidence, verification status, and verification timestamp.
+
+### Phase 4 (`20261111_0004`)
+- `jobs`: Normalized discovered job postings (`id`, `source_provider`, `canonical_fingerprint` unique, `title`, `company`, `location`, `work_mode`, `experience_level`, `employment_type`, `description`, `requirements_summary`, `required_skills`, `preferred_skills`, `education_requirements`, `min_years_experience`, `salary_range`, `external_url`, `source_domain`, `posted_at`, `retrieved_at`, `is_active`, `content_hash`, cached `embedding_vector`, `raw_metadata`, `created_at`, `updated_at`).
+- `saved_jobs`: User bookmarks (`id`, `user_id` FK -> `users.id`, `job_id` FK -> `jobs.id`, `notes`, `created_at`, unique `(user_id, job_id)`).
+- `job_matches`: Explainable match evaluations (`id`, `user_id` FK -> `users.id`, `job_id` FK -> `jobs.id`, `algorithm_version`, `overall_score`, `factor_scores`, `weights_used`, `matching_skills`, `missing_skills`, `match_explanation`, `recommended_preparation`, `computed_at`, `created_at`, `updated_at`, unique `(user_id, job_id)`).
