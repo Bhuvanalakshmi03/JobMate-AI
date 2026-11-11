@@ -3,6 +3,8 @@
 from app.database.base import Base
 from app.models.audit_log import AuditLog
 from app.modules.authentication.models import OAuthState, User, UserSession
+from app.modules.jobs.models import Job, SavedJob
+from app.modules.matching.models import JobMatch
 from app.modules.profile.models import UserProfile, UserSkill
 from app.modules.resume.models import Resume, ResumeFact
 
@@ -16,4 +18,7 @@ __all__ = [
     "UserSkill",
     "Resume",
     "ResumeFact",
+    "Job",
+    "SavedJob",
+    "JobMatch",
 ]

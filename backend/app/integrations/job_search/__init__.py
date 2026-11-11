@@ -1,0 +1,1 @@
+"""External job discovery adapters."""
