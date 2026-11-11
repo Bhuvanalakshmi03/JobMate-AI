@@ -10,6 +10,7 @@ from typing import Any
 from pydantic import ValidationError as PydanticValidationError
 
 from app.core.exceptions import ExternalServiceError, ValidationError
+from app.integrations.llm.shared import extract_json_object_text
 from app.modules.documents.generator import JobTargetContext, VerifiedCandidateContext
 from app.modules.documents.schemas import (
     ApplicationNoteStructured,
@@ -23,16 +24,10 @@ _METRIC_TOKEN_RE = re.compile(
 )
 
 
-def _strip_json_fence(raw_json: str) -> str:
-    cleaned = raw_json.strip()
-    if cleaned.startswith("```"):
-        cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", cleaned, flags=re.DOTALL).strip()
-    return cleaned
-
-
 def _parse_json_dict(raw_json: str) -> dict[str, Any]:
+    cleaned = extract_json_object_text(raw_json)
     try:
-        parsed = json.loads(_strip_json_fence(raw_json))
+        parsed = json.loads(cleaned)
     except json.JSONDecodeError as exc:
         raise ExternalServiceError("AI document generator returned malformed JSON.") from exc
     if not isinstance(parsed, dict):

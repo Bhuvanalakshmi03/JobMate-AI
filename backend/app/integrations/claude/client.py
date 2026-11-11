@@ -24,6 +24,7 @@ from app.integrations.llm.shared import (
     ToolCallingResult,
     execute_ai_with_retry,
     extract_json_object_text,
+    is_valid_json_object,
 )
 from app.integrations.openai.client import OpenAIChatClient
 
@@ -198,7 +199,7 @@ class ClaudeChatClient:
         self._settings = settings
         self._api_key = settings.anthropic_api_key.strip()
         self._model = settings.claude_model
-        self._timeout = max(float(settings.claude_timeout_seconds), 75.0)
+        self._timeout = max(float(settings.claude_timeout_seconds), 120.0)
         self._default_max_tokens = settings.claude_max_tokens
         self._max_retries = max_retries
         self._client: AsyncAnthropic | None = (
@@ -218,6 +219,9 @@ class ClaudeChatClient:
             )
         return self._client
 
+    def _resolve_json_budget(self, requested: int | None) -> int:
+        return min(max(requested or 0, self._default_max_tokens, 8192), 32768)
+
     async def _execute_with_retry(self, operation: Callable[[], Awaitable[Any]]) -> Any:
         return await execute_ai_with_retry(
             operation,
@@ -227,6 +231,93 @@ class ClaudeChatClient:
             transient_excs=(APITimeoutError, APIConnectionError),
             status_exc=APIStatusError,
             provider_label="Anthropic Claude",
+        )
+
+    async def _run_json_with_truncation_repair(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        token_budget: int,
+        tools: list[dict[str, Any]] | None = None,
+    ) -> LLMCompletionResult:
+        """Execute JSON-expected Claude call, retrying once with expanded budget if truncated."""
+        client = self._require_client()
+        total_input = 0
+        total_output = 0
+        all_citations: list[str] = []
+        seen_citations: set[str] = set()
+        model_used = self._model
+        last_cleaned = ""
+
+        for attempt in range(2):
+            active_budget = (
+                token_budget if attempt == 0 else min(max(token_budget * 2, 16384), 32768)
+            )
+            active_system = system_prompt if attempt == 0 else (
+                f"{system_prompt}\n\n"
+                "CRITICAL RECOVERY INSTRUCTION: Your previous response was truncated or "
+                "contained invalid JSON. Keep string fields concise and return ONE complete, "
+                "valid JSON object with all braces closed."
+            )
+
+            async def _call(
+                sys_prompt: str = active_system,
+                budget: int = active_budget,
+            ) -> Any:
+                kwargs: dict[str, Any] = {
+                    "model": self._model,
+                    "system": sys_prompt,
+                    "messages": [{"role": "user", "content": user_prompt}],
+                    "max_tokens": budget,
+                }
+                if tools is not None:
+                    kwargs["tools"] = cast(Any, tools)
+                return await client.messages.create(**kwargs)
+
+            response = await self._execute_with_retry(_call)
+            model_used = str(getattr(response, "model", None) or self._model)
+            usage = getattr(response, "usage", None)
+            if usage:
+                total_input += int(getattr(usage, "input_tokens", 0) or 0)
+                total_output += int(getattr(usage, "output_tokens", 0) or 0)
+
+            raw_text, attempt_citations = _extract_claude_text_and_citations(response)
+            for url in attempt_citations:
+                if url not in seen_citations:
+                    seen_citations.add(url)
+                    all_citations.append(url)
+
+            cleaned = extract_json_object_text(raw_text)
+            if cleaned:
+                last_cleaned = cleaned
+            stop_reason = getattr(response, "stop_reason", None)
+            if stop_reason != "max_tokens" and is_valid_json_object(cleaned):
+                return LLMCompletionResult(
+                    content=cleaned,
+                    model=model_used,
+                    prompt_tokens=total_input,
+                    completion_tokens=total_output,
+                    total_tokens=total_input + total_output,
+                    citations=tuple(all_citations),
+                )
+
+            if attempt == 0:
+                logger.warning(
+                    "Claude JSON response incomplete; retrying with higher token budget",
+                    extra={"model": model_used, "stop_reason": stop_reason},
+                )
+
+        if not last_cleaned:
+            raise ExternalServiceError("AI provider returned an empty response.")
+
+        return LLMCompletionResult(
+            content=last_cleaned,
+            model=model_used,
+            prompt_tokens=total_input,
+            completion_tokens=total_output,
+            total_tokens=total_input + total_output,
+            citations=tuple(all_citations),
         )
 
     async def complete_json(
@@ -239,37 +330,16 @@ class ClaudeChatClient:
     ) -> LLMCompletionResult:
         """Execute a JSON-formatted Claude completion with bounded retries."""
         _ = temperature
-        client = self._require_client()
-        token_budget = max_tokens or max(self._default_max_tokens, 4096)
+        token_budget = self._resolve_json_budget(max_tokens)
         json_system_prompt = (
             f"{system_prompt.strip()}\n\n"
             "CRITICAL OUTPUT FORMAT: Respond with ONLY a single valid JSON object. "
             "Do not include markdown code fences, commentary, or any text outside the JSON object."
         )
-
-        async def _call() -> Any:
-            return await client.messages.create(
-                model=self._model,
-                system=json_system_prompt,
-                messages=[{"role": "user", "content": user_prompt}],
-                max_tokens=token_budget,
-            )
-
-        response = await self._execute_with_retry(_call)
-        raw_text, _ = _extract_claude_text_and_citations(response)
-        cleaned_json = extract_json_object_text(raw_text)
-        if not cleaned_json:
-            raise ExternalServiceError("AI provider returned an empty response.")
-
-        usage = getattr(response, "usage", None)
-        input_tokens = int(getattr(usage, "input_tokens", 0) or 0) if usage else 0
-        output_tokens = int(getattr(usage, "output_tokens", 0) or 0) if usage else 0
-        result = LLMCompletionResult(
-            content=cleaned_json,
-            model=str(getattr(response, "model", None) or self._model),
-            prompt_tokens=input_tokens,
-            completion_tokens=output_tokens,
-            total_tokens=input_tokens + output_tokens,
+        result = await self._run_json_with_truncation_repair(
+            system_prompt=json_system_prompt,
+            user_prompt=user_prompt,
+            token_budget=token_budget,
         )
         logger.info(
             "Claude JSON completion succeeded",
@@ -290,45 +360,24 @@ class ClaudeChatClient:
         max_output_tokens: int | None = None,
     ) -> LLMCompletionResult:
         """Execute Anthropic Messages API with built-in web_search tool for live discovery."""
-        client = self._require_client()
-        token_budget = max_output_tokens or max(self._default_max_tokens, 4096)
+        token_budget = self._resolve_json_budget(max_output_tokens)
         json_system_prompt = (
             f"{system_prompt.strip()}\n\n"
             "After completing web search calls, respond with ONLY a valid JSON object matching the "
             "requested schema without markdown fences."
         )
-
-        async def _call() -> Any:
-            return await client.messages.create(
-                model=self._model,
-                system=json_system_prompt,
-                messages=[{"role": "user", "content": user_prompt}],
-                tools=cast(Any, [_CLAUDE_WEB_SEARCH_TOOL]),
-                max_tokens=token_budget,
-            )
-
-        response = await self._execute_with_retry(_call)
-        content, citations = _extract_claude_text_and_citations(response)
-        if not content:
-            raise ExternalServiceError("AI web search returned an empty response.")
-
-        usage = getattr(response, "usage", None)
-        input_tokens = int(getattr(usage, "input_tokens", 0) or 0) if usage else 0
-        output_tokens = int(getattr(usage, "output_tokens", 0) or 0) if usage else 0
-        result = LLMCompletionResult(
-            content=content,
-            model=str(getattr(response, "model", None) or self._model),
-            prompt_tokens=input_tokens,
-            completion_tokens=output_tokens,
-            total_tokens=input_tokens + output_tokens,
-            citations=citations,
+        result = await self._run_json_with_truncation_repair(
+            system_prompt=json_system_prompt,
+            user_prompt=user_prompt,
+            token_budget=token_budget,
+            tools=[_CLAUDE_WEB_SEARCH_TOOL],
         )
         logger.info(
             "Claude web search succeeded",
             extra={
                 "model": result.model,
                 "total_tokens": result.total_tokens,
-                "citation_count": len(citations),
+                "citation_count": len(result.citations),
             },
         )
         return result

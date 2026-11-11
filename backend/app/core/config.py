@@ -71,8 +71,8 @@ class Settings(BaseSettings):
     # Anthropic Claude (alternative LLM intelligence, tool calling, JSON, and web search)
     anthropic_api_key: str = ""
     claude_model: str = "claude-sonnet-5-5"
-    claude_timeout_seconds: int = Field(default=90, ge=1, le=300)
-    claude_max_tokens: int = Field(default=4096, ge=128, le=32768)
+    claude_timeout_seconds: int = Field(default=120, ge=1, le=300)
+    claude_max_tokens: int = Field(default=16384, ge=128, le=65536)
     enable_hybrid_openai_embeddings: bool = False
 
     # Google OAuth 2.0 / OIDC

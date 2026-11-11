@@ -15,6 +15,7 @@ from app.core.config import Settings
 from app.core.exceptions import NotFoundError
 from app.integrations.chroma.store import VectorStoreProtocol
 from app.integrations.job_search.openai_web_search import JobSearchProviderProtocol
+from app.integrations.llm.shared import extract_json_object_text
 from app.integrations.openai.client import (
     EmbeddingClientProtocol,
     LLMClientProtocol,
@@ -144,7 +145,7 @@ class AgentToolset:
             user_prompt=f"<user_request>\n{safe_task}\n</user_request>",
             max_tokens=200,
         )
-        parsed = json.loads(completion.content)
+        parsed = json.loads(extract_json_object_text(completion.content))
         category = str(parsed.get("task_category", "career_advisory"))
         if category not in {"job_discovery", "application_prep", "career_advisory"}:
             category = "career_advisory"
@@ -372,7 +373,7 @@ class AgentToolset:
             user_prompt=prompt,
             max_tokens=900,
         )
-        parsed = json.loads(completion.content)
+        parsed = json.loads(extract_json_object_text(completion.content))
         return {
             "summary": str(parsed.get("summary", "")),
             "strengths": list(parsed.get("strengths") or []),

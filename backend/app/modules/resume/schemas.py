@@ -23,6 +23,24 @@ VerificationAction = Literal["verify", "edit", "reject"]
 VerificationStatus = Literal["pending", "verified", "edited", "rejected"]
 
 
+_FACT_TYPE_ALIASES: dict[str, FactType] = {
+    "award": "achievement",
+    "awards": "achievement",
+    "honor": "achievement",
+    "honors": "achievement",
+    "summary": "personal_info",
+    "profile": "personal_info",
+    "work": "experience",
+    "work_experience": "experience",
+    "employment": "experience",
+    "course": "certification",
+    "training": "certification",
+    "certificate": "certification",
+    "skills": "skill",
+    "projects": "project",
+}
+
+
 class ExtractedFactCandidate(BaseModel):
     """Single structured fact extracted and validated from resume text."""
 
@@ -36,6 +54,21 @@ class ExtractedFactCandidate(BaseModel):
     source_section: str | None = Field(default=None, max_length=100)
     evidence_excerpt: str | None = Field(default=None, max_length=1000)
     confidence: float = Field(default=0.7, ge=0.0, le=1.0)
+
+    @field_validator("fact_type", mode="before")
+    @classmethod
+    def normalize_fact_type(cls, value: object) -> object:
+        if isinstance(value, str):
+            norm = value.strip().lower().replace(" ", "_")
+            return _FACT_TYPE_ALIASES.get(norm, norm)
+        return value
+
+    @field_validator("confidence", mode="before")
+    @classmethod
+    def normalize_confidence(cls, value: object) -> object:
+        if isinstance(value, (int, float)) and value > 1.0 and value <= 100.0:
+            return round(float(value) / 100.0, 3)
+        return value
 
     @field_validator("title")
     @classmethod

@@ -118,24 +118,38 @@ def extract_json_object_text(raw_text: str) -> str:
     fence_match = _CODE_FENCE_RE.search(cleaned)
     if fence_match:
         cleaned = fence_match.group(1).strip()
+    elif cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE).strip()
+        if cleaned.endswith("```"):
+            cleaned = cleaned[:-3].strip()
 
-    if cleaned.startswith("{"):
+    decoder = json.JSONDecoder()
+    for match in re.finditer(r"\{", cleaned):
+        candidate = cleaned[match.start() :]
         try:
-            _, end_idx = json.JSONDecoder().raw_decode(cleaned)
-            return cleaned[:end_idx]
+            parsed_obj, end_idx = decoder.raw_decode(candidate)
         except json.JSONDecodeError:
-            pass
+            continue
+        if isinstance(parsed_obj, dict):
+            return candidate[:end_idx]
 
     first_brace = cleaned.find("{")
     if first_brace != -1:
-        candidate = cleaned[first_brace:]
-        try:
-            _, end_idx = json.JSONDecoder().raw_decode(candidate)
-            return candidate[:end_idx]
-        except json.JSONDecodeError:
-            return candidate
+        return cleaned[first_brace:]
 
     return cleaned
+
+
+def is_valid_json_object(raw_text: str) -> bool:
+    """Return True when raw_text parses cleanly as a JSON object (dict)."""
+    cleaned = extract_json_object_text(raw_text)
+    if not cleaned:
+        return False
+    try:
+        parsed = json.loads(cleaned)
+    except json.JSONDecodeError:
+        return False
+    return isinstance(parsed, dict)
 
 
 async def execute_ai_with_retry(

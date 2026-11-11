@@ -23,10 +23,12 @@ from app.integrations.llm.factory import (
     create_llm_client,
     get_web_search_source_provider,
 )
+from app.integrations.llm.shared import extract_json_object_text
 from app.integrations.openai.client import OpenAIChatClient
 from app.modules.authentication.models import User
 from app.modules.profile.models import UserProfile, UserSkill
 from app.modules.rag.service import RAGService
+from app.modules.resume.schemas import ExtractedFactCandidate
 
 
 async def test_claude_client_requires_api_key() -> None:
@@ -289,3 +291,48 @@ async def test_rag_lexical_fallback_works_in_claude_mode_without_embeddings(
             hits = await rag.retrieve_context(user_id=user.id, query="PyTorch AI Engineer", top_k=3)
             assert len(hits) == 1
             assert "PyTorch" in hits[0].text
+
+
+async def test_claude_truncation_auto_recovery_and_json_helpers() -> None:
+    unclosed = '```json\n{"completeness_score": 88, "facts": []}'
+    assert extract_json_object_text(unclosed) == '{"completeness_score": 88, "facts": []}'
+    noisy = 'Note {not json} -> {"ok": true, "items": [1, 2]} tail'
+    assert extract_json_object_text(noisy) == '{"ok": true, "items": [1, 2]}'
+
+    fact = ExtractedFactCandidate(
+        fact_type="award",  # type: ignore[arg-type]
+        title="Dean's List",
+        confidence=95,
+    )
+    assert fact.fact_type == "achievement"
+    assert fact.confidence == 0.95
+
+    client = ClaudeChatClient(
+        Settings(llm_mode="claude", anthropic_api_key="sk-ant-usr-test", claude_max_tokens=8192),
+        max_retries=0,
+    )
+    assert client._client is not None
+    budgets: list[object] = []
+
+    async def fake_truncated_then_valid(**kwargs: object) -> object:
+        budgets.append(kwargs.get("max_tokens"))
+        if len(budgets) == 1:
+            return SimpleNamespace(
+                model="claude-sonnet-5-5",
+                stop_reason="max_tokens",
+                content=[SimpleNamespace(type="text", text='{"incomplete": "cut off')],
+                usage=SimpleNamespace(input_tokens=100, output_tokens=8192),
+            )
+        return SimpleNamespace(
+            model="claude-sonnet-5-5",
+            stop_reason="end_turn",
+            content=[SimpleNamespace(type="text", text='{"ok": true, "facts": []}')],
+            usage=SimpleNamespace(input_tokens=120, output_tokens=40),
+        )
+
+    client._client.messages.create = fake_truncated_then_valid  # type: ignore[method-assign]
+    res = await client.complete_json(system_prompt="Extract", user_prompt="Resume", max_tokens=4096)
+    assert budgets == [8192, 16384]
+    assert res.content == '{"ok": true, "facts": []}'
+    assert res.prompt_tokens == 220
+    assert res.completion_tokens == 8232

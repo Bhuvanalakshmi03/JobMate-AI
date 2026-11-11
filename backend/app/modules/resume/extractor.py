@@ -49,6 +49,11 @@ For `personal_info` facts, include `structured_data` keys when explicitly presen
   "location", "phone", "linkedin_url", "github_url", "portfolio_url", "headline".
 For `education` facts, include `structured_data` keys when explicitly present:
   "university", "degree", "graduation_year".
+
+COMPACTNESS RULES:
+- Keep every `description` under 140 characters (or null for `skill` facts without specifics).
+- Keep every `evidence_excerpt` short and verbatim (<= 90 chars).
+- Keep strengths/weaknesses/missing_skills/recommendations concise (under 15 words each).
 """
 
 
@@ -85,7 +90,7 @@ class ResumeAnalystExtractor:
         completion = await self._llm.complete_json(
             system_prompt=RESUME_ANALYST_SYSTEM_PROMPT,
             user_prompt=user_prompt,
-            max_tokens=4096,
+            max_tokens=8192,
             temperature=0.1,
         )
         return RawExtractionOutput(
