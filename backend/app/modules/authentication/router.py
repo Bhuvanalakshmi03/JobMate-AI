@@ -23,32 +23,56 @@ from app.modules.authentication.schemas import (
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-def _set_session_cookie(response: Response, settings: Settings, token: str) -> None:
+def _cookie_secure(settings: Settings, request: Request | None = None) -> bool:
+    if settings.session_cookie_secure or settings.session_cookie_samesite == "none":
+        return True
+    if request is None:
+        return False
+    forwarded_proto = request.headers.get("X-Forwarded-Proto", "").split(",")[0].strip().lower()
+    return forwarded_proto == "https" or request.url.scheme == "https"
+
+
+def _set_session_cookie(
+    response: Response,
+    settings: Settings,
+    token: str,
+    *,
+    request: Request | None = None,
+) -> None:
     response.set_cookie(
         key=settings.session_cookie_name,
         value=token,
         max_age=settings.session_ttl_seconds,
         httponly=True,
-        secure=settings.session_cookie_secure,
-        samesite="lax",
+        secure=_cookie_secure(settings, request),
+        samesite=settings.session_cookie_samesite,
+        domain=settings.session_cookie_domain,
         path="/",
     )
 
 
-def _clear_session_cookie(response: Response, settings: Settings) -> None:
+def _clear_session_cookie(
+    response: Response,
+    settings: Settings,
+    *,
+    request: Request | None = None,
+) -> None:
+    secure = _cookie_secure(settings, request)
     response.delete_cookie(
         key=settings.session_cookie_name,
         httponly=True,
-        secure=settings.session_cookie_secure,
-        samesite="lax",
+        secure=secure,
+        samesite=settings.session_cookie_samesite,
+        domain=settings.session_cookie_domain,
         path="/",
     )
     if settings.session_cookie_name != "careerpilot_session":
         response.delete_cookie(
             key="careerpilot_session",
             httponly=True,
-            secure=settings.session_cookie_secure,
-            samesite="lax",
+            secure=secure,
+            samesite=settings.session_cookie_samesite,
+            domain=settings.session_cookie_domain,
             path="/",
         )
 
@@ -112,12 +136,12 @@ async def google_callback(
     )
 
     if mode == "json":
-        _set_session_cookie(response, settings, session_res.access_token)
+        _set_session_cookie(response, settings, session_res.access_token, request=request)
         return session_res
 
     target_url = f"{settings.frontend_url.rstrip('/')}{redirect_path}"
     redirect_response = RedirectResponse(url=target_url, status_code=status.HTTP_302_FOUND)
-    _set_session_cookie(redirect_response, settings, session_res.access_token)
+    _set_session_cookie(redirect_response, settings, session_res.access_token, request=request)
     return redirect_response
 
 
@@ -139,7 +163,7 @@ async def dev_login(
         ip_address=_client_ip(request),
         user_agent=request.headers.get("User-Agent"),
     )
-    _set_session_cookie(response, settings, session_res.access_token)
+    _set_session_cookie(response, settings, session_res.access_token, request=request)
     return session_res
 
 
@@ -161,7 +185,7 @@ async def logout(
         user_id=auth_ctx.user.id,
         ip_address=_client_ip(request),
     )
-    _clear_session_cookie(response, settings)
+    _clear_session_cookie(response, settings, request=request)
     return LogoutResponse()
 
 
@@ -204,6 +228,7 @@ async def export_my_account_data(
     summary="Permanently delete the authenticated user account and all personal data",
 )
 async def delete_my_account(
+    request: Request,
     response: Response,
     auth_ctx: CurrentAuthDep,
     session: DBSessionDep,
@@ -211,5 +236,5 @@ async def delete_my_account(
 ) -> None:
     """Delete private files, revoke session cookie, and cascade-delete user record."""
     await delete_user_account(session=session, settings=settings, user=auth_ctx.user)
-    _clear_session_cookie(response, settings)
+    _clear_session_cookie(response, settings, request=request)
 

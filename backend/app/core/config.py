@@ -75,6 +75,8 @@ class Settings(BaseSettings):
     oauth_state_ttl_seconds: int = Field(default=600, ge=60, le=3600)
     session_cookie_name: str = Field(default="jobmate_session", min_length=1)
     session_cookie_secure: bool = False
+    session_cookie_samesite: Literal["lax", "strict", "none"] = "lax"
+    session_cookie_domain: str | None = None
     dev_auth_enabled: bool = False
 
     # ChromaDB
@@ -99,6 +101,15 @@ class Settings(BaseSettings):
     # Monitoring & Timeouts
     log_level: LogLevel = "INFO"
     request_timeout_seconds: int = Field(default=30, ge=1, le=300)
+
+    @field_validator("session_cookie_domain", mode="before")
+    @classmethod
+    def normalize_cookie_domain(cls, value: object) -> str | None:
+        """Convert blank SESSION_COOKIE_DOMAIN values to None for host-only cookies."""
+        if value is None:
+            return None
+        cleaned = str(value).strip()
+        return cleaned or None
 
     @field_validator("log_level", mode="before")
     @classmethod

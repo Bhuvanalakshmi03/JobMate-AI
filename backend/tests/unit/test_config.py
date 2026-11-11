@@ -86,3 +86,12 @@ def test_settings_rejects_dev_auth_in_production() -> None:
             dev_auth_enabled=True,
         )
 
+
+def test_settings_normalizes_cookie_domain_and_samesite() -> None:
+    blank_domain = Settings(session_cookie_domain="   ", session_cookie_samesite="none")
+    assert blank_domain.session_cookie_domain is None
+    assert blank_domain.session_cookie_samesite == "none"
+
+    scoped_domain = Settings(session_cookie_domain=".techcreed.in")
+    assert scoped_domain.session_cookie_domain == ".techcreed.in"
+

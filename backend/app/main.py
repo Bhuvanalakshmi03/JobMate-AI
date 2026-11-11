@@ -65,10 +65,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     if settings is not None:
         application.dependency_overrides[get_app_settings] = lambda: resolved_settings
 
+    cors_origins = list(resolved_settings.cors_allowed_origins)
+    for required_origin in (
+        resolved_settings.frontend_url.strip().rstrip("/"),
+        "https://jobmate.techcreed.in",
+    ):
+        if required_origin and required_origin not in cors_origins:
+            cors_origins.append(required_origin)
+
     application.add_middleware(RequestContextMiddleware)
     application.add_middleware(
         CORSMiddleware,
-        allow_origins=resolved_settings.cors_allowed_origins,
+        allow_origins=cors_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type", "X-Request-ID", "Idempotency-Key"],

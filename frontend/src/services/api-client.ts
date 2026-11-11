@@ -32,7 +32,16 @@ const DEFAULT_TIMEOUT_MS = 30000;
 
 export function getApiBaseUrl(): string {
   const configured = import.meta.env.VITE_API_BASE_URL as string | undefined;
-  return (configured && configured.trim().replace(/\/$/, "")) || DEFAULT_BASE_URL;
+  if (configured && configured.trim()) {
+    return configured.trim().replace(/\/$/, "");
+  }
+  if (
+    typeof window !== "undefined" &&
+    window.location.hostname === "jobmate.techcreed.in"
+  ) {
+    return `${window.location.protocol}//jobmateapi.techcreed.in/api/v1`;
+  }
+  return DEFAULT_BASE_URL;
 }
 
 let unauthorizedHandler: (() => void) | null = null;

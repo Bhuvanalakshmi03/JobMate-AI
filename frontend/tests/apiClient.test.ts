@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { ApiClientError, apiRequest } from "../src/services/api-client";
+import { ApiClientError, apiRequest, getApiBaseUrl } from "../src/services/api-client";
 
 describe("apiRequest", () => {
   it("parses JSON response on 200 OK", async () => {
@@ -68,6 +68,22 @@ describe("apiRequest", () => {
       code: "NETWORK_ERROR",
       message: expect.stringContaining("JobMate AI API server"),
     });
+  });
+
+  it("maps jobmate.techcreed.in frontend host to jobmateapi.techcreed.in API base URL", () => {
+    const originalLocation = window.location;
+    Object.defineProperty(window, "location", {
+      value: { hostname: "jobmate.techcreed.in", protocol: "https:" },
+      configurable: true,
+    });
+    try {
+      expect(getApiBaseUrl()).toBe("https://jobmateapi.techcreed.in/api/v1");
+    } finally {
+      Object.defineProperty(window, "location", {
+        value: originalLocation,
+        configurable: true,
+      });
+    }
   });
 });
 

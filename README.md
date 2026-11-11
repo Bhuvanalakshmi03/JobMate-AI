@@ -160,6 +160,8 @@ docker build -f frontend/Dockerfile -t jobmate-frontend .
 docker run -d --name jobmate-frontend -p 33340:33340 -e API_PROXY_URL=http://host.docker.internal:33339 jobmate-frontend
 ```
 
+**Production Domains:** Frontend `https://jobmate.techcreed.in` (`VITE_API_BASE_URL=https://jobmateapi.techcreed.in/api/v1`) and Backend `https://jobmateapi.techcreed.in` (`FRONTEND_URL`, `CORS_ALLOWED_ORIGINS`, `GOOGLE_REDIRECT_URI=https://jobmateapi.techcreed.in/api/v1/auth/google/callback`).
+
 ---
 
 ## Documentation
