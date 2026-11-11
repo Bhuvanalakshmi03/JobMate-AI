@@ -1,0 +1,23 @@
+.git
+.gitignore
+.venv
+backend/.venv
+venv
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+backend/.coverage
+frontend/node_modules
+frontend/dist
+frontend/build
+frontend/.vite
+frontend/*.tsbuildinfo
+backend/storage
+storage
+.DS_Store
+
+# Ensure root .env (and .env.example fallback) remain available in build context
+!.env
+!.env.example

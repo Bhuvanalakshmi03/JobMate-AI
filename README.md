@@ -148,6 +148,18 @@ npm run typecheck
 npm run build
 ```
 
+### 5. Standalone Docker Builds (Ports `33339` & `33340`)
+Both Dockerfiles build directly from the **repository root** (and copy root `.env` when present):
+```bash
+# Backend container (port 33339; set RUN_MIGRATIONS=true to run Alembic on boot)
+docker build -f backend/Dockerfile -t jobmate-backend .
+docker run -d --name jobmate-backend -p 33339:33339 -e RUN_MIGRATIONS=true jobmate-backend
+
+# Frontend Nginx container (port 33340; optional API_PROXY_URL proxies /api -> backend)
+docker build -f frontend/Dockerfile -t jobmate-frontend .
+docker run -d --name jobmate-frontend -p 33340:33340 -e API_PROXY_URL=http://host.docker.internal:33339 jobmate-frontend
+```
+
 ---
 
 ## Documentation
