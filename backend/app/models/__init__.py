@@ -2,7 +2,9 @@
 
 from app.database.base import Base
 from app.models.audit_log import AuditLog
+from app.modules.agents.models import WorkflowRun
 from app.modules.applications.models import Application, ApplicationHistory
+from app.modules.approvals.models import ApprovalRequest
 from app.modules.authentication.models import OAuthState, User, UserSession
 from app.modules.documents.models import GeneratedDocument
 from app.modules.jobs.models import Job, SavedJob
@@ -26,4 +28,6 @@ __all__ = [
     "GeneratedDocument",
     "Application",
     "ApplicationHistory",
+    "WorkflowRun",
+    "ApprovalRequest",
 ]
