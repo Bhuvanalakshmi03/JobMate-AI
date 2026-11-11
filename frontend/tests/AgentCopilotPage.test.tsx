@@ -5,16 +5,19 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AgentCopilotPage } from "../src/features/agents/pages/AgentCopilotPage";
 import { agentService } from "../src/services/agent-service";
+import { approvalService } from "../src/services/approval-service";
+import { calendarService } from "../src/services/calendar-service";
+import { copilotService } from "../src/services/copilot-service";
 import { jobService } from "../src/services/job-service";
 import { resumeService } from "../src/services/resume-service";
 
-function renderCopilotPage() {
+function renderCopilotPage(initialRoute = "/copilot") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[initialRoute]}>
         <AgentCopilotPage />
       </MemoryRouter>
     </QueryClientProvider>
@@ -35,6 +38,13 @@ describe("AgentCopilotPage", () => {
     });
     vi.spyOn(resumeService, "listResumes").mockResolvedValue({ items: [], total: 0 });
     vi.spyOn(agentService, "listWorkflows").mockResolvedValue({ items: [], total: 0 });
+    vi.spyOn(copilotService, "listConversations").mockResolvedValue({ items: [], total: 0 });
+    vi.spyOn(calendarService, "getStatus").mockResolvedValue({
+      connected: false,
+      google_email: null,
+      scopes: [],
+      token_expires_at: null,
+    });
 
     const syncSpy = vi.spyOn(agentService, "syncRag").mockResolvedValue({
       indexed_chunks: 4,
@@ -93,6 +103,8 @@ describe("AgentCopilotPage", () => {
 
     renderCopilotPage();
 
+    fireEvent.click(screen.getByRole("tab", { name: /LangGraph Workflows & RAG/i }));
+
     fireEvent.click(screen.getByRole("button", { name: "Sync Knowledge to ChromaDB" }));
     await waitFor(() => {
       expect(syncSpy).toHaveBeenCalled();
@@ -123,5 +135,145 @@ describe("AgentCopilotPage", () => {
       expect(screen.getByText("approval_gate")).toBeInTheDocument();
     });
   });
-});
 
+  it("manages Co-Pilot chat sessions, renders tool calls, and executes approved Google Calendar events", async () => {
+    vi.spyOn(jobService, "searchJobs").mockResolvedValue({
+      items: [],
+      total: 0,
+      source: "database",
+      cached: false,
+    });
+    vi.spyOn(resumeService, "listResumes").mockResolvedValue({ items: [], total: 0 });
+    vi.spyOn(agentService, "listWorkflows").mockResolvedValue({ items: [], total: 0 });
+    vi.spyOn(calendarService, "getStatus").mockResolvedValue({
+      connected: true,
+      google_email: "mukilan069@gmail.com",
+      scopes: ["https://www.googleapis.com/auth/calendar.events"],
+      token_expires_at: "2026-11-11T18:00:00Z",
+    });
+    vi.spyOn(calendarService, "listEvents").mockResolvedValue({
+      connected: true,
+      items: [
+        {
+          event_id: "evt-1",
+          summary: "Mock System Design Review",
+          start_iso: "2026-11-12T10:00:00Z",
+          end_iso: "2026-11-12T10:45:00Z",
+          location: "Google Meet",
+          description: null,
+          html_link: "https://calendar.google.com/event?eid=evt-1",
+          status: "confirmed",
+        },
+      ],
+    });
+
+    const convSummary = {
+      id: "conv-1",
+      user_id: "u-1",
+      title: "Zoho Prep Session",
+      is_archived: false,
+      last_message_at: "2026-11-11T12:00:00Z",
+      created_at: "2026-11-11T11:50:00Z",
+      updated_at: "2026-11-11T12:00:00Z",
+    };
+
+    const approvalItem = {
+      id: "apr-cal-1",
+      user_id: "u-1",
+      workflow_run_id: null,
+      application_id: null,
+      action_type: "create_calendar_event",
+      target_destination: "Google Calendar (primary)",
+      title: "Add Calendar Event: Zoho Interview Prep",
+      payload: { summary: "Zoho Interview Prep" },
+      status: "PENDING",
+      decision_note: null,
+      decided_at: null,
+      executed_at: null,
+      execution_result: null,
+      created_at: "2026-11-11T12:00:00Z",
+      updated_at: "2026-11-11T12:00:00Z",
+    };
+
+    vi.spyOn(copilotService, "listConversations").mockResolvedValue({
+      items: [convSummary],
+      total: 1,
+    });
+    vi.spyOn(copilotService, "getConversation").mockResolvedValue({
+      conversation: convSummary,
+      messages: [
+        {
+          id: "msg-1",
+          conversation_id: "conv-1",
+          role: "assistant",
+          content: "I checked your schedule and staged the Zoho prep calendar block for approval.",
+          tool_calls: [
+            {
+              tool_name: "list_calendar_events",
+              arguments: { days_ahead: 7 },
+              status: "completed",
+              result_preview: "Found 1 upcoming event",
+            },
+          ],
+          approval_ids: ["apr-cal-1"],
+          tokens_used: 95,
+          created_at: "2026-11-11T12:00:00Z",
+        },
+      ],
+      approvals: [approvalItem],
+    });
+
+    const sendSpy = vi.spyOn(copilotService, "sendMessage").mockResolvedValue({
+      conversation: convSummary,
+      user_message: {
+        id: "msg-2",
+        conversation_id: "conv-1",
+        role: "user",
+        content: "Add a follow-up note for Chargebee",
+        tool_calls: [],
+        approval_ids: [],
+        tokens_used: 0,
+        created_at: "2026-11-11T12:01:00Z",
+      },
+      assistant_message: {
+        id: "msg-3",
+        conversation_id: "conv-1",
+        role: "assistant",
+        content: "Updated Chargebee notes.",
+        tool_calls: [],
+        approval_ids: [],
+        tokens_used: 40,
+        created_at: "2026-11-11T12:01:02Z",
+      },
+      created_approvals: [],
+    });
+
+    const approveSpy = vi.spyOn(approvalService, "approve").mockResolvedValue({
+      ...approvalItem,
+      status: "EXECUTED",
+    });
+
+    renderCopilotPage();
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Zoho Prep Session" })).toBeInTheDocument();
+      expect(screen.getByText("Mock System Design Review")).toBeInTheDocument();
+      expect(screen.getByText(/list_calendar_events \(completed\)/)).toBeInTheDocument();
+      expect(screen.getByText("Add Calendar Event: Zoho Interview Prep")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Approve & Execute" }));
+    await waitFor(() => {
+      expect(approveSpy).toHaveBeenCalledWith("apr-cal-1", "Approved from Co-Pilot Chat");
+    });
+
+    fireEvent.change(screen.getByLabelText("Message AI Co-Pilot"), {
+      target: { value: "Add a follow-up note for Chargebee" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => {
+      expect(sendSpy).toHaveBeenCalledWith("conv-1", "Add a follow-up note for Chargebee");
+    });
+  });
+});

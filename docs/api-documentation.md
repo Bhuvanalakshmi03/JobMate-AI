@@ -43,5 +43,26 @@ Allowed statuses: `SAVED`, `PREPARING`, `AWAITING_APPROVAL`, `SUBMITTED`, `INTER
 - `GET /api/v1/approvals` — List approval requests (`?status=PENDING|APPROVED|REJECTED|EXECUTED...`).
 - `POST /api/v1/approvals` — Prepare a standalone human-gated external action approval (`201 Created`).
 - `GET /api/v1/approvals/{approval_id}` — Inspect exact target destination, payload, and execution status.
-- `POST /api/v1/approvals/{approval_id}/approve` — Confirm and execute a pending external action and resume linked workflow.
+- `POST /api/v1/approvals/{approval_id}/approve` — Confirm and execute a pending external action (`submit_application` or `create_calendar_event`) and resume linked workflow.
 - `POST /api/v1/approvals/{approval_id}/reject` — Reject a pending external action and prevent execution.
+
+## Google Calendar Endpoints (`20261111_0008`)
+- `GET /api/v1/calendar/status` — Check whether the current user has connected Google Calendar (`connected`, `google_email`, `scopes`, `token_expires_at`).
+- `GET /api/v1/calendar/connect` — Initiate incremental Google Calendar OAuth consent (`?mode=json&redirect_to=/copilot`), reusing `/api/v1/auth/google/callback`.
+- `GET /api/v1/calendar/events` — Read upcoming primary Google Calendar events (`?days_ahead=14&max_results=15`).
+- `POST /api/v1/calendar/events` — Directly create a Google Calendar event (`201 Created`; Co-Pilot tools use `propose_calendar_event` -> human approval first).
+- `DELETE /api/v1/calendar/disconnect` — Remove stored Google Calendar connection and encrypted tokens (`204 No Content`).
+
+## Session-Managed Co-Pilot Chat Endpoints (`20261111_0008`)
+- `GET /api/v1/copilot/conversations` — List chat sessions owned by the authenticated user.
+- `POST /api/v1/copilot/conversations` — Create a new chat session (`201 Created`).
+- `GET /api/v1/copilot/conversations/{conversation_id}` — Load full conversation transcript, executed tool logs, and linked approval items.
+- `PATCH /api/v1/copilot/conversations/{conversation_id}` — Rename or archive a chat session.
+- `DELETE /api/v1/copilot/conversations/{conversation_id}` — Delete a chat session and its messages (`204 No Content`).
+- `POST /api/v1/copilot/conversations/{conversation_id}/messages` — Send a user turn, run OpenAI multi-turn function calling across 13 user-scoped tools, persist tool logs + proposed approvals, and return the assistant reply.
+
+## Workspace Seeding Script
+```bash
+cd backend && .venv/bin/python -m scripts.seed_user_data --email mukilan069@gmail.com
+```
+Idempotently seeds curated jobs, `JobMatch` scores, verified grounded documents, multi-stage applications, pending approvals, and a starter Co-Pilot chat conversation without overwriting existing resumes or `ResumeFact`s.

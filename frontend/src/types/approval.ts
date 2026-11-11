@@ -1,5 +1,6 @@
 export type ApprovalActionType =
   | "submit_application"
+  | "create_calendar_event"
   | "send_recruiter_email"
   | "upload_external_resume"
   | "send_application_message";
@@ -65,6 +66,8 @@ export function approvalActionLabel(actionType: string): string {
   switch (actionType) {
     case "submit_application":
       return "Submit Application";
+    case "create_calendar_event":
+      return "Add Google Calendar Event";
     case "send_recruiter_email":
       return "Send Recruiter Email";
     case "upload_external_resume":

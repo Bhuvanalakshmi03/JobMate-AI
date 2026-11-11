@@ -1,6 +1,15 @@
-import { Activity, Database, Play, Search, ShieldAlert, Sparkles } from "lucide-react";
+import {
+  Activity,
+  Bot,
+  Database,
+  MessageSquare,
+  Play,
+  Search,
+  ShieldAlert,
+  Sparkles,
+} from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { Card } from "../../../components/ui/Card";
 import { StateNotice } from "../../../components/ui/StateNotice";
@@ -11,6 +20,7 @@ import {
   type WorkflowTaskType,
 } from "../../../types/agent";
 import { formatDisplayDate } from "../../applications/utils/dates";
+import { CopilotChatPanel } from "../../copilot/components/CopilotChatPanel";
 import { useJobSearch } from "../../jobs/hooks/useJobs";
 import { useResumesList } from "../../resume/hooks/useResumes";
 import {
@@ -21,6 +31,11 @@ import {
 } from "../hooks/useAgents";
 
 export function AgentCopilotPage() {
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") === "workflows" ? "workflows" : "chat";
+  const calendarConnected = searchParams.get("calendar") === "connected";
+  const [activeTab, setActiveTab] = useState<"chat" | "workflows">(initialTab);
+
   const workflowsQuery = useWorkflowsList();
   const jobsQuery = useJobSearch({ limit: 30 }, true);
   const resumesQuery = useResumesList();
@@ -91,43 +106,85 @@ export function AgentCopilotPage() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">AI Agent Co-Pilot</h1>
           <p className="mt-1 text-sm text-slate-600">
-            LangGraph multi-agent orchestration with RAG retrieval and mandatory human approval
-            gates before external actions.
+            Session-managed AI chat with tool calling &amp; Google Calendar, plus LangGraph
+            multi-agent orchestration with human approval gates.
           </p>
         </div>
-        <button
-          type="button"
-          disabled={syncRagMutation.isPending}
-          onClick={() => void handleSyncRag()}
-          className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 disabled:opacity-50"
-        >
-          <Database className="h-4 w-4" aria-hidden="true" />
-          {syncRagMutation.isPending ? "Indexing..." : "Sync Knowledge to ChromaDB"}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <div
+            role="tablist"
+            aria-label="Co-Pilot Workspace Mode"
+            className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-1"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "chat"}
+              onClick={() => setActiveTab("chat")}
+              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                activeTab === "chat"
+                  ? "bg-white text-indigo-700 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
+              Co-Pilot Chat &amp; Calendar
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "workflows"}
+              onClick={() => setActiveTab("workflows")}
+              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                activeTab === "workflows"
+                  ? "bg-white text-indigo-700 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <Bot className="h-3.5 w-3.5" aria-hidden="true" />
+              LangGraph Workflows &amp; RAG
+            </button>
+          </div>
+          {activeTab === "workflows" && (
+            <button
+              type="button"
+              disabled={syncRagMutation.isPending}
+              onClick={() => void handleSyncRag()}
+              className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 disabled:opacity-50"
+            >
+              <Database className="h-4 w-4" aria-hidden="true" />
+              {syncRagMutation.isPending ? "Indexing..." : "Sync Knowledge to ChromaDB"}
+            </button>
+          )}
+        </div>
       </header>
 
-      {syncRagMutation.data && (
-        <StateNotice
-          title="ChromaDB career index updated"
-          description={`Indexed ${syncRagMutation.data.indexed_chunks} chunk(s) (${syncRagMutation.data.skipped_duplicates} duplicate(s) skipped).`}
-          tone="info"
-        />
-      )}
+      {activeTab === "chat" ? (
+        <CopilotChatPanel calendarJustConnected={calendarConnected} />
+      ) : (
+        <>
+          {syncRagMutation.data && (
+            <StateNotice
+              title="ChromaDB career index updated"
+              description={`Indexed ${syncRagMutation.data.indexed_chunks} chunk(s) (${syncRagMutation.data.skipped_duplicates} duplicate(s) skipped).`}
+              tone="info"
+            />
+          )}
 
-      {syncRagMutation.error && (
-        <StateNotice
-          title="Knowledge indexing failed"
-          description={syncRagMutation.error.message}
-          tone="error"
-        />
-      )}
+          {syncRagMutation.error && (
+            <StateNotice
+              title="Knowledge indexing failed"
+              description={syncRagMutation.error.message}
+              tone="error"
+            />
+          )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
+          <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <Card
             title="Launch Multi-Agent Workflow"
@@ -467,6 +524,8 @@ export function AgentCopilotPage() {
           </Card>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

@@ -31,6 +31,8 @@ export function useApproveActionMutation() {
       void queryClient.invalidateQueries({ queryKey: ["approvals"] });
       void queryClient.invalidateQueries({ queryKey: ["agents"] });
       void queryClient.invalidateQueries({ queryKey: ["applications"] });
+      void queryClient.invalidateQueries({ queryKey: ["calendar"] });
+      void queryClient.invalidateQueries({ queryKey: ["copilot"] });
     },
   });
 }
@@ -44,6 +46,7 @@ export function useRejectActionMutation() {
       void queryClient.invalidateQueries({ queryKey: ["approvals"] });
       void queryClient.invalidateQueries({ queryKey: ["agents"] });
       void queryClient.invalidateQueries({ queryKey: ["applications"] });
+      void queryClient.invalidateQueries({ queryKey: ["copilot"] });
     },
   });
 }

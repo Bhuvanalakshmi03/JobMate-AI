@@ -30,3 +30,9 @@
 ### Phase 7 (`20261111_0007`)
 - `workflow_runs`: Durable LangGraph workflow checkpoints and telemetry (`id`, `user_id` FK -> `users.id`, `job_id` FK -> `jobs.id`, `application_id` FK -> `applications.id`, `task_type`, `user_request`, `current_stage`, `status`, `state_snapshot`, `agent_outputs`, `validation_results`, `pending_approval_id`, `execution_trace`, `total_tokens_used`, `error_detail`, `created_at`, `updated_at`, index `ix_workflow_runs_user_status`).
 - `approvals`: Pending and decided human approval records (`id`, `user_id` FK -> `users.id`, `workflow_run_id` FK -> `workflow_runs.id`, `application_id` FK -> `applications.id`, `action_type`, `target_destination`, `title`, `payload`, `status`, `decision_note`, `decided_at`, `executed_at`, `execution_result`, `created_at`, `updated_at`, indexes `ix_approvals_user_status`, `ix_approvals_workflow_run`).
+
+### Phase 7+ — Google Calendar & Session-Managed Co-Pilot Chat (`20261111_0008`)
+- `oauth_states` extensions: Added `flow_type` (`"login"` | `"calendar_connect"`) and nullable `user_id` (FK -> `users.id`) for incremental OAuth consent reuse.
+- `google_calendar_connections`: Per-user encrypted OAuth credentials (`id`, `user_id` FK -> `users.id` unique, `google_email`, `scopes`, `encrypted_access_token`, `encrypted_refresh_token`, `token_expires_at`, `created_at`, `updated_at`).
+- `copilot_conversations`: Persistent Co-Pilot chat sessions (`id`, `user_id` FK -> `users.id`, `title`, `is_archived`, `last_message_at`, `created_at`, `updated_at`, index `ix_copilot_conversations_user_recent`).
+- `copilot_messages`: Multi-turn conversation log (`id`, `conversation_id` FK -> `copilot_conversations.id`, `user_id` FK -> `users.id`, `role`, `content`, `tool_calls`, `approval_ids`, `tokens_used`, `created_at`, index `ix_copilot_messages_conv_created`).
