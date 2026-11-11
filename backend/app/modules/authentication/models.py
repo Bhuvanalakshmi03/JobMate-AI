@@ -61,6 +61,12 @@ class OAuthState(UUIDPrimaryKeyMixin, Base):
     nonce: Mapped[str] = mapped_column(String(128), nullable=False)
     code_verifier: Mapped[str] = mapped_column(String(255), nullable=False)
     redirect_to: Mapped[str] = mapped_column(String(512), nullable=False, default="/")
+    flow_type: Mapped[str] = mapped_column(String(32), nullable=False, default="login")
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=True,
+    )
     expires_at: Mapped[datetime] = mapped_column(UTCDateTime(), nullable=False, index=True)
     consumed_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now, nullable=False)

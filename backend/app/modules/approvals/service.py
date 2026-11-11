@@ -8,6 +8,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import Settings, get_settings
 from app.core.exceptions import NotFoundError, ValidationError
 from app.database.base import utc_now
 from app.modules.applications.repository import ApplicationRepository
@@ -21,6 +22,9 @@ from app.modules.approvals.schemas import (
     ApprovalListResponse,
     ApprovalResponse,
 )
+from app.modules.authentication.repository import UserRepository
+from app.modules.calendar.schemas import CalendarEventCreateRequest
+from app.modules.calendar.service import CalendarService
 from app.repositories.audit_repository import AuditLogRepository
 
 WorkflowDecisionHook = Callable[[ApprovalRequest, str], Awaitable[None]]
@@ -33,11 +37,18 @@ class ApprovalService:
         self,
         session: AsyncSession,
         workflow_hook: WorkflowDecisionHook | None = None,
+        settings: Settings | None = None,
+        calendar_service: CalendarService | None = None,
     ) -> None:
         self._session = session
+        self._settings = settings or get_settings()
         self._approvals = ApprovalRepository(session)
         self._apps = ApplicationRepository(session)
         self._app_service = ApplicationService(session)
+        self._users = UserRepository(session)
+        self._calendar = calendar_service or CalendarService(
+            session=session, settings=self._settings
+        )
         self._audit = AuditLogRepository(session)
         self._workflow_hook = workflow_hook
 
@@ -203,6 +214,41 @@ class ApprovalService:
         """Execute verified post-approval action safely without inventing unapproved changes."""
         if record.status != "APPROVED":
             raise ValidationError("External execution requires explicit APPROVED status.")
+
+        if record.action_type == "create_calendar_event":
+            owner = await self._users.get_by_id(user_id)
+            if owner is None:
+                raise NotFoundError("Approving user account was not found.")
+            raw_payload = dict(record.payload or {})
+            event = await self._calendar.create_event(
+                user=owner,
+                payload=CalendarEventCreateRequest(
+                    summary=str(raw_payload.get("summary") or record.title)[:250],
+                    start_iso=str(raw_payload.get("start_iso") or ""),
+                    end_iso=str(raw_payload.get("end_iso") or ""),
+                    description=(
+                        str(raw_payload["description"])
+                        if raw_payload.get("description")
+                        else None
+                    ),
+                    location=(
+                        str(raw_payload["location"]) if raw_payload.get("location") else None
+                    ),
+                    timezone=(
+                        str(raw_payload["timezone"]) if raw_payload.get("timezone") else None
+                    ),
+                ),
+            )
+            return {
+                "executed": True,
+                "action_type": record.action_type,
+                "target_destination": record.target_destination,
+                "event_id": event.event_id,
+                "html_link": event.html_link,
+                "start_iso": event.start_iso,
+                "end_iso": event.end_iso,
+                "mode": "google_calendar_api_v3",
+            }
 
         application_transitioned = False
         if record.action_type == "submit_application" and record.application_id is not None:

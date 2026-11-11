@@ -139,12 +139,16 @@ class OAuthStateRepository:
         code_verifier: str,
         redirect_to: str,
         expires_at: datetime,
+        flow_type: str = "login",
+        user_id: uuid.UUID | None = None,
     ) -> OAuthState:
         record = OAuthState(
             state_hash=state_hash,
             nonce=nonce,
             code_verifier=code_verifier,
             redirect_to=redirect_to,
+            flow_type=flow_type,
+            user_id=user_id,
             expires_at=expires_at,
         )
         self._session.add(record)

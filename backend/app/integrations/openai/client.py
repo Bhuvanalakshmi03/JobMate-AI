@@ -5,8 +5,9 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 import httpx
 from openai import APIConnectionError, APIStatusError, APITimeoutError, AsyncOpenAI, RateLimitError
@@ -114,6 +115,32 @@ class EmbeddingClientProtocol(Protocol):
     """Protocol enabling deterministic mocked text embeddings in tests."""
 
     async def embed_texts(self, texts: list[str]) -> list[list[float]]: ...
+
+
+@dataclass(frozen=True, slots=True)
+class ToolCallingResult:
+    """Multi-round OpenAI function/tool calling response and telemetry."""
+
+    content: str
+    model: str
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+    executed_tools: tuple[dict[str, Any], ...] = field(default_factory=tuple)
+
+
+class ToolCallingClientProtocol(Protocol):
+    """Protocol enabling deterministic mocked tool-calling chat in tests."""
+
+    async def complete_with_tools(
+        self,
+        *,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]],
+        tool_executor: Callable[[str, dict[str, Any]], Awaitable[str]],
+        max_rounds: int = 6,
+        max_tokens: int | None = None,
+    ) -> ToolCallingResult: ...
 
 
 def _extract_citation_urls(response: Any) -> tuple[str, ...]:
@@ -317,3 +344,138 @@ class OpenAIChatClient:
             extra={"model": self._embedding_model, "count": len(vectors)},
         )
         return vectors
+
+    async def complete_with_tools(
+        self,
+        *,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]],
+        tool_executor: Callable[[str, dict[str, Any]], Awaitable[str]],
+        max_rounds: int = 6,
+        max_tokens: int | None = None,
+    ) -> ToolCallingResult:
+        """Execute a bounded multi-turn OpenAI function-calling conversation loop."""
+        client = self._require_client()
+        token_budget = max_tokens or max(self._default_max_tokens, 4096)
+        working_messages: list[dict[str, Any]] = [dict(msg) for msg in messages]
+        executed_tools: list[dict[str, Any]] = []
+        total_prompt = 0
+        total_completion = 0
+        total_tokens = 0
+        model_used = self._model
+
+        for _ in range(max(1, max_rounds)):
+            async def _call() -> Any:
+                return await client.chat.completions.create(
+                    model=self._model,
+                    messages=cast(Any, working_messages),
+                    tools=cast(Any, tools),
+                    tool_choice="auto",
+                    max_tokens=token_budget,
+                    temperature=0.2,
+                )
+
+            response = await self._execute_with_retry(_call)
+            model_used = str(getattr(response, "model", None) or self._model)
+            usage = getattr(response, "usage", None)
+            if usage:
+                total_prompt += int(getattr(usage, "prompt_tokens", 0) or 0)
+                total_completion += int(getattr(usage, "completion_tokens", 0) or 0)
+                total_tokens += int(getattr(usage, "total_tokens", 0) or 0)
+
+            choice = response.choices[0] if response.choices else None
+            msg = choice.message if choice else None
+            raw_tool_calls = list(getattr(msg, "tool_calls", None) or []) if msg else []
+
+            if not raw_tool_calls:
+                final_text = str(getattr(msg, "content", "") or "").strip() if msg else ""
+                if not final_text:
+                    final_text = "Completed your request."
+                return ToolCallingResult(
+                    content=final_text,
+                    model=model_used,
+                    prompt_tokens=total_prompt,
+                    completion_tokens=total_completion,
+                    total_tokens=total_tokens,
+                    executed_tools=tuple(executed_tools),
+                )
+
+            assistant_msg: dict[str, Any] = {
+                "role": "assistant",
+                "content": getattr(msg, "content", None),
+                "tool_calls": [
+                    {
+                        "id": str(tc.id),
+                        "type": "function",
+                        "function": {
+                            "name": str(tc.function.name),
+                            "arguments": str(tc.function.arguments or "{}"),
+                        },
+                    }
+                    for tc in raw_tool_calls
+                ],
+            }
+            working_messages.append(assistant_msg)
+
+            for tc in raw_tool_calls:
+                tool_name = str(tc.function.name)
+                raw_args = str(tc.function.arguments or "{}")
+                try:
+                    parsed_args = json.loads(raw_args)
+                    if not isinstance(parsed_args, dict):
+                        parsed_args = {}
+                except json.JSONDecodeError:
+                    parsed_args = {}
+
+                status = "completed"
+                try:
+                    tool_output = await tool_executor(tool_name, parsed_args)
+                except Exception as exc:
+                    status = "error"
+                    tool_output = json.dumps({"error": str(exc) or exc.__class__.__name__})
+
+                executed_tools.append(
+                    {
+                        "tool_name": tool_name,
+                        "arguments": parsed_args,
+                        "status": status,
+                        "result_preview": tool_output[:320],
+                    }
+                )
+                working_messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": str(tc.id),
+                        "content": tool_output[:8000],
+                    }
+                )
+
+        # Final synthesis pass without further tool calls if max_rounds reached cleanly.
+        async def _final_call() -> Any:
+            return await client.chat.completions.create(
+                model=self._model,
+                messages=cast(Any, working_messages),
+                max_tokens=token_budget,
+                temperature=0.2,
+            )
+
+        final_resp = await self._execute_with_retry(_final_call)
+        final_usage = getattr(final_resp, "usage", None)
+        if final_usage:
+            total_prompt += int(getattr(final_usage, "prompt_tokens", 0) or 0)
+            total_completion += int(getattr(final_usage, "completion_tokens", 0) or 0)
+            total_tokens += int(getattr(final_usage, "total_tokens", 0) or 0)
+        final_choice = final_resp.choices[0] if final_resp.choices else None
+        final_content = (
+            str(getattr(final_choice.message, "content", "") or "").strip()
+            if final_choice and final_choice.message
+            else "Completed requested actions."
+        )
+        return ToolCallingResult(
+            content=final_content,
+            model=model_used,
+            prompt_tokens=total_prompt,
+            completion_tokens=total_completion,
+            total_tokens=total_tokens,
+            executed_tools=tuple(executed_tools),
+        )

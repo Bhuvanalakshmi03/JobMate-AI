@@ -16,6 +16,7 @@ from app.core.security import (
     generate_pkce_pair,
     generate_random_token,
     hash_token,
+    sanitize_redirect_path,
 )
 from app.database.base import utc_now
 from app.integrations.oauth.google import OAuthProviderProtocol
@@ -32,17 +33,8 @@ from app.modules.authentication.schemas import (
     DevLoginRequest,
     UserResponse,
 )
+from app.modules.calendar.service import CalendarService
 from app.repositories.audit_repository import AuditLogRepository
-
-
-def sanitize_redirect_path(redirect_to: str | None) -> str:
-    """Ensure post-login redirect targets remain relative to the frontend origin."""
-    if not redirect_to:
-        return "/"
-    trimmed = redirect_to.strip()
-    if not trimmed.startswith("/") or trimmed.startswith("//") or "\\" in trimmed:
-        return "/"
-    return trimmed
 
 
 @dataclass(frozen=True, slots=True)
@@ -137,6 +129,28 @@ class AuthService:
             code_verifier=oauth_state.code_verifier,
             expected_nonce=oauth_state.nonce,
         )
+
+        if oauth_state.flow_type == "calendar_connect" and oauth_state.user_id is not None:
+            connected_user = await self._users.get_by_id(oauth_state.user_id)
+            if connected_user is None:
+                raise AuthenticationError("Authorizing user account was not found.")
+            if not connected_user.is_active:
+                raise AuthorizationError("This user account has been deactivated.")
+            await CalendarService(
+                session=self._session,
+                settings=self._settings,
+            ).save_oauth_connection(user_id=connected_user.id, identity=identity)
+            session_response = await self._issue_user_session(
+                user=connected_user,
+                is_demo_auth=False,
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
+            redirect_target = oauth_state.redirect_to
+            sep = "&" if "?" in redirect_target else "?"
+            if "calendar=" not in redirect_target:
+                redirect_target = f"{redirect_target}{sep}calendar=connected"
+            return session_response, redirect_target
 
         user = await self._users.get_by_oauth_identity(
             provider=identity.provider,

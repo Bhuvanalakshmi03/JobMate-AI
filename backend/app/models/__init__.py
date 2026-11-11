@@ -6,6 +6,8 @@ from app.modules.agents.models import WorkflowRun
 from app.modules.applications.models import Application, ApplicationHistory
 from app.modules.approvals.models import ApprovalRequest
 from app.modules.authentication.models import OAuthState, User, UserSession
+from app.modules.calendar.models import GoogleCalendarConnection
+from app.modules.copilot.models import CopilotConversation, CopilotMessage
 from app.modules.documents.models import GeneratedDocument
 from app.modules.jobs.models import Job, SavedJob
 from app.modules.matching.models import JobMatch
@@ -30,4 +32,7 @@ __all__ = [
     "ApplicationHistory",
     "WorkflowRun",
     "ApprovalRequest",
+    "GoogleCalendarConnection",
+    "CopilotConversation",
+    "CopilotMessage",
 ]

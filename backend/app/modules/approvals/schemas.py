@@ -13,6 +13,7 @@ ApprovalActionType = Literal[
     "send_recruiter_email",
     "upload_external_resume",
     "send_application_message",
+    "create_calendar_event",
 ]
 
 ApprovalStatus = Literal[
@@ -69,3 +70,4 @@ class ApprovalListResponse(BaseModel):
     items: list[ApprovalResponse]
     total: int
     pending_count: int
+

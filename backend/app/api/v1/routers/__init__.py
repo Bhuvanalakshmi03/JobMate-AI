@@ -9,6 +9,8 @@ from app.modules.agents.router import router as agents_router
 from app.modules.applications.router import router as applications_router
 from app.modules.approvals.router import router as approvals_router
 from app.modules.authentication.router import router as auth_router
+from app.modules.calendar.router import router as calendar_router
+from app.modules.copilot.router import router as copilot_router
 from app.modules.documents.router import router as documents_router
 from app.modules.jobs.router import router as jobs_router
 from app.modules.profile.router import router as profile_router
@@ -24,3 +26,5 @@ api_v1_router.include_router(documents_router)
 api_v1_router.include_router(applications_router)
 api_v1_router.include_router(agents_router)
 api_v1_router.include_router(approvals_router)
+api_v1_router.include_router(calendar_router)
+api_v1_router.include_router(copilot_router)

@@ -11,6 +11,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import jwt
+from cryptography.fernet import Fernet, InvalidToken
 
 from app.core.exceptions import AuthenticationError
 
@@ -80,4 +81,34 @@ def decode_session_token(*, token: str, secret_key: str) -> tuple[uuid.UUID, uui
         return user_id, session_id
     except (jwt.PyJWTError, ValueError, KeyError) as exc:
         raise AuthenticationError("Session token is invalid or has expired.") from exc
+
+
+def _derive_fernet_key(secret_key: str) -> bytes:
+    digest = hashlib.sha256(secret_key.encode("utf-8")).digest()
+    return base64.urlsafe_b64encode(digest)
+
+
+def encrypt_secret(plaintext: str, *, secret_key: str) -> str:
+    """Encrypt a sensitive OAuth token for at-rest database storage."""
+    token = Fernet(_derive_fernet_key(secret_key)).encrypt(plaintext.encode("utf-8"))
+    return token.decode("ascii")
+
+
+def decrypt_secret(ciphertext: str, *, secret_key: str) -> str:
+    """Decrypt a stored OAuth token, raising AuthenticationError if invalid."""
+    try:
+        raw = Fernet(_derive_fernet_key(secret_key)).decrypt(ciphertext.encode("ascii"))
+    except InvalidToken as exc:
+        raise AuthenticationError("Stored Google credential could not be decrypted.") from exc
+    return raw.decode("utf-8")
+
+
+def sanitize_redirect_path(redirect_to: str | None) -> str:
+    """Ensure post-login redirect targets remain relative to the frontend origin."""
+    if not redirect_to:
+        return "/"
+    trimmed = redirect_to.strip()
+    if not trimmed.startswith("/") or trimmed.startswith("//") or "\\" in trimmed:
+        return "/"
+    return trimmed
 

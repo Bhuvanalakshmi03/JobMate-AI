@@ -7,7 +7,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
 
-from app.core.dependencies import DBSessionDep
+from app.core.dependencies import DBSessionDep, SettingsDep
 from app.modules.agents.router import AgentServiceDep
 from app.modules.approvals.models import ApprovalRequest
 from app.modules.approvals.schemas import (
@@ -18,18 +18,26 @@ from app.modules.approvals.schemas import (
 )
 from app.modules.approvals.service import ApprovalService
 from app.modules.authentication.dependencies import CurrentUserDep
+from app.modules.calendar.router import CalendarServiceDep
 
 router = APIRouter(prefix="/approvals", tags=["Approvals"])
 
 
 def get_approval_service(
     session: DBSessionDep,
+    settings: SettingsDep,
     orchestrator: AgentServiceDep,
+    calendar_service: CalendarServiceDep,
 ) -> ApprovalService:
     async def _on_decision(approval: ApprovalRequest, decision: str) -> None:
         await orchestrator.resume_from_approval(approval=approval, decision=decision)
 
-    return ApprovalService(session=session, workflow_hook=_on_decision)
+    return ApprovalService(
+        session=session,
+        workflow_hook=_on_decision,
+        settings=settings,
+        calendar_service=calendar_service,
+    )
 
 
 ApprovalServiceDep = Annotated[ApprovalService, Depends(get_approval_service)]

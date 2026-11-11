@@ -21,7 +21,7 @@ GOOGLE_VALID_ISSUERS = frozenset({"accounts.google.com", "https://accounts.googl
 
 @dataclass(frozen=True, slots=True)
 class OAuthIdentity:
-    """Verified OIDC user identity returned by an OAuth provider."""
+    """Verified OIDC user identity and optional OAuth tokens returned by provider."""
 
     provider: str
     subject: str
@@ -29,6 +29,10 @@ class OAuthIdentity:
     email_verified: bool
     full_name: str
     avatar_url: str | None
+    access_token: str | None = None
+    refresh_token: str | None = None
+    expires_in: int | None = None
+    scope: str | None = None
 
 
 class OAuthProviderProtocol(Protocol):
@@ -72,22 +76,52 @@ class GoogleOAuthClient:
         state: str,
         nonce: str,
         code_challenge: str,
+        extra_scopes: tuple[str, ...] = (),
+        prompt_override: str | None = None,
     ) -> str:
         """Construct Google OIDC authorization URL with PKCE S256 and nonce."""
         self._ensure_configured()
+        scopes = ["openid", "email", "profile", *extra_scopes]
         params = {
             "client_id": self._client_id,
             "redirect_uri": self._redirect_uri,
             "response_type": "code",
-            "scope": "openid email profile",
+            "scope": " ".join(scopes),
             "state": state,
             "nonce": nonce,
             "code_challenge": code_challenge,
             "code_challenge_method": "S256",
             "access_type": "offline",
-            "prompt": "select_account",
+            "prompt": prompt_override or "select_account",
         }
         return f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
+
+    async def refresh_access_token(self, *, refresh_token: str) -> tuple[str, int]:
+        """Exchange a stored offline refresh token for a fresh Google access token."""
+        self._ensure_configured()
+        payload = {
+            "client_id": self._client_id,
+            "client_secret": self._client_secret,
+            "refresh_token": refresh_token,
+            "grant_type": "refresh_token",
+        }
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                response = await client.post(GOOGLE_TOKEN_URL, data=payload)
+        except httpx.HTTPError as exc:
+            raise ExternalServiceError("Failed to contact Google OAuth refresh endpoint.") from exc
+
+        if response.status_code != 200:
+            raise AuthenticationError(
+                "Google Calendar authorization expired or was revoked. Please reconnect."
+            )
+
+        data: dict[str, Any] = response.json()
+        new_access = str(data.get("access_token") or "").strip()
+        if not new_access:
+            raise AuthenticationError("Google refresh response did not return an access token.")
+        expires_in = int(data.get("expires_in") or 3600)
+        return new_access, expires_in
 
     async def exchange_and_verify(
         self,
@@ -158,4 +192,24 @@ class GoogleOAuthClient:
             email_verified=True,
             full_name=full_name,
             avatar_url=avatar_url,
+            access_token=(
+                str(token_data["access_token"]).strip()
+                if isinstance(token_data.get("access_token"), str)
+                else None
+            ),
+            refresh_token=(
+                str(token_data["refresh_token"]).strip()
+                if isinstance(token_data.get("refresh_token"), str)
+                else None
+            ),
+            expires_in=(
+                int(token_data["expires_in"])
+                if isinstance(token_data.get("expires_in"), int | float)
+                else None
+            ),
+            scope=(
+                str(token_data["scope"]).strip()
+                if isinstance(token_data.get("scope"), str)
+                else None
+            ),
         )
