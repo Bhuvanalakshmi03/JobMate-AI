@@ -1,0 +1,56 @@
+"""Async SQLAlchemy engine, session factory, and health check helpers."""
+
+from __future__ import annotations
+
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+
+from app.core.config import Settings
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
+def create_db_engine(settings: Settings) -> AsyncEngine:
+    """Create configured SQLAlchemy async engine with connection pooling for PostgreSQL."""
+    async_url, connect_args = settings.async_database_config
+    engine_kwargs: dict[str, object] = {
+        "echo": settings.db_echo,
+        "pool_pre_ping": True,
+    }
+    if connect_args:
+        engine_kwargs["connect_args"] = connect_args
+    if not settings.is_sqlite:
+        engine_kwargs["pool_size"] = settings.db_pool_size
+        engine_kwargs["max_overflow"] = settings.db_max_overflow
+
+    return create_async_engine(async_url, **engine_kwargs)
+
+
+def create_session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
+    """Create async session factory bound to the given engine."""
+    return async_sessionmaker(
+        bind=engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autoflush=False,
+    )
+
+
+async def check_database_health(engine: AsyncEngine) -> tuple[bool, str | None]:
+    """Verify database connectivity with a lightweight SELECT 1 probe."""
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        return True, None
+    except Exception as exc:
+        logger.error(
+            "Database readiness check failed",
+            extra={"exception_class": exc.__class__.__name__},
+        )
+        return False, exc.__class__.__name__
