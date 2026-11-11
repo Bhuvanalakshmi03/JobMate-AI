@@ -3,6 +3,7 @@
 from app.database.base import Base
 from app.models.audit_log import AuditLog
 from app.modules.authentication.models import OAuthState, User, UserSession
+from app.modules.documents.models import GeneratedDocument
 from app.modules.jobs.models import Job, SavedJob
 from app.modules.matching.models import JobMatch
 from app.modules.profile.models import UserProfile, UserSkill
@@ -21,4 +22,5 @@ __all__ = [
     "Job",
     "SavedJob",
     "JobMatch",
+    "GeneratedDocument",
 ]
