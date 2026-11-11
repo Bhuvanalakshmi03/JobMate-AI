@@ -1,4 +1,6 @@
 import {
+  BellRing,
+  BrainCircuit,
   Briefcase,
   CalendarDays,
   ClipboardList,
@@ -30,8 +32,10 @@ const NAV_ITEMS = [
   { to: "/documents", label: "Document Studio", icon: FilePenLine },
   { to: "/applications", label: "Applications", icon: ClipboardList },
   { to: "/interviews", label: "Mock Interviews", icon: GraduationCap },
+  { to: "/reminders", label: "Reminders", icon: BellRing },
   { to: "/calendar", label: "Weekly Calendar", icon: CalendarDays },
   { to: "/copilot", label: "AI Co-Pilot", icon: Sparkles },
+  { to: "/memory", label: "Memory & Privacy", icon: BrainCircuit },
   { to: "/approvals", label: "Approvals", icon: ShieldCheck },
 ];
 

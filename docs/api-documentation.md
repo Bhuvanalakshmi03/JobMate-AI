@@ -59,7 +59,7 @@ Allowed statuses: `SAVED`, `PREPARING`, `AWAITING_APPROVAL`, `SUBMITTED`, `INTER
 - `GET /api/v1/copilot/conversations/{conversation_id}` — Load full conversation transcript, executed tool logs, and linked approval items.
 - `PATCH /api/v1/copilot/conversations/{conversation_id}` — Rename or archive a chat session.
 - `DELETE /api/v1/copilot/conversations/{conversation_id}` — Delete a chat session and its messages (`204 No Content`).
-- `POST /api/v1/copilot/conversations/{conversation_id}/messages` — Send a user turn, run OpenAI multi-turn function calling across 15 user-scoped tools, persist tool logs + proposed approvals, and return the assistant reply.
+- `POST /api/v1/copilot/conversations/{conversation_id}/messages` — Send a user turn, run OpenAI multi-turn function calling across 19 user-scoped tools with approved Career Memory context, persist tool logs + proposed approvals, and return the assistant reply.
 
 ## Interview Preparation Endpoints (Phase 8)
 - `GET /api/v1/interviews/skill-gap-plan` — Consolidated cross-job missing skills and interview weakness improvement plan.
@@ -72,8 +72,28 @@ Allowed statuses: `SAVED`, `PREPARING`, `AWAITING_APPROVAL`, `SUBMITTED`, `INTER
 - `GET /api/v1/interviews/{session_id}/feedback` — Retrieve persisted session evaluation feedback.
 - `DELETE /api/v1/interviews/{session_id}` — Delete a mock interview session (`204 No Content`).
 
+## Career Memory, Privacy & Account Lifecycle Endpoints (Phase 9)
+- `GET /api/v1/memory/consent` — Retrieve `ai_consent_given` and `notification_consent` flags.
+- `PATCH /api/v1/memory/consent` — Update explicit AI Career Memory and digest notification consent flags.
+- `GET /api/v1/memory` — List Career Memory items owned by the authenticated user (`?category=...&approved_only=...`).
+- `POST /api/v1/memory` — Create or upsert a user-approved Career Memory entry (`201 Created`; blocked unless `ai_consent_given=true`).
+- `PATCH /api/v1/memory/{memory_id}` — Edit content/category, approve, or toggle active status of a Career Memory entry.
+- `DELETE /api/v1/memory/{memory_id}` — Delete a single Career Memory entry (`204 No Content`).
+- `DELETE /api/v1/memory` — Clear all Career Memory entries for the current user (`204 No Content`).
+- `GET /api/v1/auth/export` — Export complete personal career data snapshot owned by the authenticated user.
+- `DELETE /api/v1/auth/account` — Remove private uploaded files, revoke session cookie, and cascade-delete the account (`204 No Content`).
+
+## Reminders & Notification Delivery Endpoints (Phase 9)
+- `GET /api/v1/reminders` — List reminders (`?status=...`) and due in-app notifications count.
+- `POST /api/v1/reminders` — Schedule a deduplicated (`dedup_key`), timezone-converted (`user_timezone`) reminder (`201 Created`).
+- `POST /api/v1/reminders/dispatch-due` — Deliver due reminders idempotently with bounded exponential backoff retry on failure.
+- `PATCH /api/v1/reminders/{reminder_id}` — Reschedule or update title/message/timezone of a reminder.
+- `POST /api/v1/reminders/{reminder_id}/cancel` — Cancel a scheduled or retry-queued reminder.
+- `POST /api/v1/reminders/{reminder_id}/dismiss` — Dismiss a sent in-app notification reminder.
+- `DELETE /api/v1/reminders/{reminder_id}` — Delete a reminder (`204 No Content`).
+
 ## Workspace Seeding Script
 ```bash
 cd backend && .venv/bin/python -m scripts.seed_user_data --email mukilan069@gmail.com
 ```
-Idempotently seeds curated jobs, `JobMatch` scores, verified grounded documents, multi-stage applications, pending approvals, and a starter Co-Pilot chat conversation without overwriting existing resumes or `ResumeFact`s.
+Idempotently seeds curated jobs, `JobMatch` scores, verified grounded documents, multi-stage applications, pending approvals, a starter Co-Pilot chat conversation, an evaluated mock interview session, approved Career Memory entries, and scheduled reminders without overwriting existing resumes or `ResumeFact`s.

@@ -15,7 +15,9 @@ import { InterviewSessionPage } from "../../features/interviews/pages/InterviewS
 import { InterviewsPage } from "../../features/interviews/pages/InterviewsPage";
 import { JobDetailsPage } from "../../features/jobs/pages/JobDetailsPage";
 import { JobsPage } from "../../features/jobs/pages/JobsPage";
+import { MemoryAndPrivacyPage } from "../../features/memory/pages/MemoryAndPrivacyPage";
 import { ProfilePage } from "../../features/profile/pages/ProfilePage";
+import { RemindersPage } from "../../features/reminders/pages/RemindersPage";
 import { ResumeAnalysisPage } from "../../features/resume/pages/ResumeAnalysisPage";
 import { ResumesPage } from "../../features/resume/pages/ResumesPage";
 
@@ -169,6 +171,26 @@ export function AppRouter() {
           <ProtectedRoute>
             <AppShell>
               <InterviewSessionPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/reminders"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <RemindersPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/memory"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <MemoryAndPrivacyPage />
             </AppShell>
           </ProtectedRoute>
         }

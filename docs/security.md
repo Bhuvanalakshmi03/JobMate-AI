@@ -19,3 +19,9 @@
 - IANA timezones validated via `zoneinfo.ZoneInfo`; external links restricted to `http://` and `https://`.
 - Structured JSON logs recursively redact sensitive keys (`token`, `secret`, `api_key`, `password`, `resume_text`, `raw_text`).
 - Centralized exception handling omits internal stack traces from API responses.
+
+## Career Memory Privacy, Reminders & Account Lifecycle (Phase 9)
+- **Explicit Privacy Consent Gating:** Persistent Career Memory creation/update and Co-Pilot prompt injection are blocked unless `user_profiles.ai_consent_given=true`; notification opt-in is tracked via `notification_consent`.
+- **Full Memory Ownership & Control:** Users can inspect, edit, approve/deactivate, delete individual entries, or wipe all `career_memory` rows at any time via `/api/v1/memory/*`.
+- **Deduplicated & Bounded Reminder Delivery:** Unique `(user_id, dedup_key)` constraint prevents duplicate reminder spam, and failed dispatches transition safely to `RETRY_QUEUED` up to `max_attempts` before `FAILED`.
+- **Personal Data Export & Account Deletion:** `GET /api/v1/auth/export` exports user-scoped records without internal hashes/secrets; `DELETE /api/v1/auth/account` deletes stored private resume files, revokes cookies, and cascades all database records.

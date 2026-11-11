@@ -27,5 +27,13 @@ export const authService = {
     apiRequest<LogoutResponse>("/auth/logout", {
       method: "POST",
     }),
+
+  exportMyData: (): Promise<Record<string, unknown>> =>
+    apiRequest<Record<string, unknown>>("/auth/export"),
+
+  deleteAccount: (): Promise<void> =>
+    apiRequest<void>("/auth/account", {
+      method: "DELETE",
+    }),
 };
 

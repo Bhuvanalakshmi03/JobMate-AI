@@ -29,10 +29,18 @@ from app.modules.approvals.models import ApprovalRequest
 from app.modules.authentication.models import User
 from app.modules.copilot.models import CopilotConversation, CopilotMessage
 from app.modules.documents.models import GeneratedDocument
+from app.modules.interviews.models import (
+    InterviewAnswer,
+    InterviewFeedback,
+    InterviewQuestion,
+    InterviewSession,
+)
 from app.modules.jobs.models import Job, SavedJob
 from app.modules.jobs.repository import compute_job_content_hash, compute_job_fingerprint
 from app.modules.matching.service import JobMatchingService
+from app.modules.memory.models import CareerMemory
 from app.modules.profile.models import UserProfile, UserSkill
+from app.modules.reminders.models import Reminder
 from app.modules.resume.models import Resume
 
 CURATED_REALISTIC_JOBS: tuple[dict[str, Any], ...] = (
@@ -743,6 +751,288 @@ async def _ensure_workflow_approvals_and_chat(
         )
 
 
+async def _ensure_phase8_and_9_records(
+    session: AsyncSession,
+    *,
+    user: User,
+    jobs_by_company: dict[str, Job],
+    apps_by_company: dict[str, Application],
+) -> None:
+    now = utc_now()
+    profile = await session.scalar(select(UserProfile).where(UserProfile.user_id == user.id))
+    if profile is not None:
+        profile.ai_consent_given = True
+        profile.notification_consent = True
+
+    zoho_job = jobs_by_company.get("Zoho Corporation")
+    zoho_app = apps_by_company.get("Zoho Corporation")
+    freshworks_job = jobs_by_company.get("Freshworks")
+    freshworks_app = apps_by_company.get("Freshworks")
+
+    session_title = "Zoho AI / Deep Learning Intern Technical Screening"
+    existing_session = await session.scalar(
+        select(InterviewSession).where(
+            InterviewSession.user_id == user.id,
+            InterviewSession.title == session_title,
+        )
+    )
+    if existing_session is None:
+        interview_session = InterviewSession(
+            user_id=user.id,
+            job_id=zoho_job.id if zoho_job else None,
+            application_id=zoho_app.id if zoho_app else None,
+            title=session_title,
+            target_role="AI / Deep Learning Intern",
+            company_name="Zoho Corporation",
+            focus_area="mixed",
+            difficulty="entry",
+            status="EVALUATED",
+            question_count=2,
+            overall_score=84.5,
+        )
+        session.add(interview_session)
+        await session.flush()
+
+        q1 = InterviewQuestion(
+            session_id=interview_session.id,
+            user_id=user.id,
+            order_index=1,
+            category="technical",
+            prompt=(
+                "Walk through how you structured the EcoTrack Python and OpenCV vision "
+                "pipeline to balance inference accuracy with real-time throughput."
+            ),
+            expected_topics=["Python", "OpenCV", "Deep Learning", "Batching & latency"],
+            difficulty="entry",
+            guidance="Explain model preprocessing, frame sampling, and bottlenecks measured.",
+        )
+        q2 = InterviewQuestion(
+            session_id=interview_session.id,
+            user_id=user.id,
+            order_index=2,
+            category="behavioral",
+            prompt=(
+                "Describe a time a model or backend integration failed unexpectedly during "
+                "testing and how you systematically isolated the root cause."
+            ),
+            expected_topics=["STAR structure", "Root-cause debugging", "Validation testing"],
+            difficulty="entry",
+            guidance="Cover Situation, Task, Action, and measurable verification Result.",
+        )
+        session.add_all([q1, q2])
+        await session.flush()
+
+        session.add_all(
+            [
+                InterviewAnswer(
+                    question_id=q1.id,
+                    session_id=interview_session.id,
+                    user_id=user.id,
+                    answer_text=(
+                        "In EcoTrack, we separated frame capture from OpenCV preprocessing and "
+                        "Deep Learning classification so resizing and normalization ran before "
+                        "model inference, keeping detection deterministic and maintainable."
+                    ),
+                    time_spent_seconds=145,
+                    submitted_at=now - timedelta(hours=3),
+                ),
+                InterviewAnswer(
+                    question_id=q2.id,
+                    session_id=interview_session.id,
+                    user_id=user.id,
+                    answer_text=(
+                        "During integration testing, image color-channel mismatches degraded "
+                        "predictions. I isolated preprocessing outputs step-by-step, added an "
+                        "assertion on RGB ordering, and verified consistent outputs across cases."
+                    ),
+                    time_spent_seconds=120,
+                    submitted_at=now - timedelta(hours=2, minutes=50),
+                ),
+            ]
+        )
+
+        session.add(
+            InterviewFeedback(
+                session_id=interview_session.id,
+                user_id=user.id,
+                overall_score=84.5,
+                rubric_scores={
+                    "technical_accuracy": 86.0,
+                    "communication_clarity": 85.0,
+                    "star_structure": 82.0,
+                    "role_alignment": 85.0,
+                },
+                strengths=[
+                    "Clear explanation of EcoTrack preprocessing and OpenCV pipeline stages",
+                    "Methodical isolation of channel-order regression during testing",
+                ],
+                weaknesses=[
+                    "Include concrete latency budgets (ms/frame) when describing throughput",
+                    "Quantify post-fix test suite coverage more explicitly in STAR results",
+                ],
+                question_evaluations=[
+                    {
+                        "question_id": str(q1.id),
+                        "prompt": q1.prompt,
+                        "category": "technical",
+                        "score": 86.0,
+                        "rubric": {
+                            "technical_accuracy": 88.0,
+                            "communication_clarity": 86.0,
+                            "star_structure": 82.0,
+                            "role_alignment": 88.0,
+                        },
+                        "strengths": ["Clear OpenCV + DL boundary explanation"],
+                        "improvements": ["Mention profiling numbers (FPS / ms latency)"],
+                        "sample_strong_points": ["BGR-to-RGB normalization", "Frame batching"],
+                    },
+                    {
+                        "question_id": str(q2.id),
+                        "prompt": q2.prompt,
+                        "category": "behavioral",
+                        "score": 83.0,
+                        "rubric": {
+                            "technical_accuracy": 84.0,
+                            "communication_clarity": 84.0,
+                            "star_structure": 82.0,
+                            "role_alignment": 82.0,
+                        },
+                        "strengths": ["Concrete debugging mindset with preventive assertions"],
+                        "improvements": ["Highlight team stakeholder communication in Action"],
+                        "sample_strong_points": ["Regression test addition", "Channel assertions"],
+                    },
+                ],
+                skill_improvement_plan=[
+                    {
+                        "skill": "Inference Profiling & TensorRT/ONNX Optimization",
+                        "current_gap": "Practice quantifying baseline vs optimized latency.",
+                        "priority": "high",
+                        "action_items": [
+                            "Benchmark EcoTrack inference per-frame latency in Python",
+                            "Prepare a 60-second walkthrough of memory vs throughput tradeoffs",
+                        ],
+                        "estimated_hours": 4,
+                    },
+                    {
+                        "skill": "Quantified STAR Storytelling",
+                        "current_gap": (
+                            "Sharpen measurable Result statements for behavioral rounds."
+                        ),
+                        "priority": "medium",
+                        "action_items": [
+                            "Draft 3 STAR stories highlighting testing, teamwork, and delivery",
+                        ],
+                        "estimated_hours": 3,
+                    },
+                ],
+                summary=(
+                    "Strong entry-level technical grounding aligned with Zoho AI / Deep Learning "
+                    "Intern expectations; sharpen latency metrics and STAR Result framing."
+                ),
+                model_used="seeded-rubric-v1",
+                tokens_used=0,
+                evaluated_at=now - timedelta(hours=2, minutes=30),
+            )
+        )
+
+    memory_specs = (
+        {
+            "memory_key": "target-role-focus",
+            "category": "goal",
+            "title": "Primary 2026 Role Targets",
+            "content": (
+                "Targeting entry-level AI/ML Engineering and Python FastAPI Full-Stack roles "
+                "in Chennai and Bengaluru."
+            ),
+        },
+        {
+            "memory_key": "work-mode-preference",
+            "category": "preference",
+            "title": "Location & Work Mode Preference",
+            "content": "Prefers hybrid or on-site engineering teams in Chennai.",
+        },
+        {
+            "memory_key": "signature-project-highlight",
+            "category": "strength",
+            "title": "Flagship Grounded Project Highlight",
+            "content": (
+                "Emphasize EcoTrack (Python, OpenCV, Deep Learning) when preparing technical "
+                "answers and tailored applications."
+            ),
+        },
+    )
+    for spec in memory_specs:
+        existing_mem = await session.scalar(
+            select(CareerMemory).where(
+                CareerMemory.user_id == user.id,
+                CareerMemory.memory_key == spec["memory_key"],
+            )
+        )
+        if existing_mem is None:
+            session.add(
+                CareerMemory(
+                    user_id=user.id,
+                    category=spec["category"],
+                    title=spec["title"],
+                    content=spec["content"],
+                    source="user_manual",
+                    memory_key=spec["memory_key"],
+                    is_approved=True,
+                    is_active=True,
+                )
+            )
+
+    reminder_specs: tuple[dict[str, Any], ...] = (
+        {
+            "dedup_key": "seed-zoho-interview-prep",
+            "application_id": zoho_app.id if zoho_app else None,
+            "job_id": zoho_job.id if zoho_job else None,
+            "title": "Review Zoho Technical Interview Notes",
+            "message": (
+                "Walk through Python, OpenCV, Deep Learning, and EcoTrack talking points "
+                "before the technical screen."
+            ),
+            "reminder_type": "interview_prep",
+            "scheduled_for": now + timedelta(days=2),
+        },
+        {
+            "dedup_key": "seed-freshworks-approval-check",
+            "application_id": freshworks_app.id if freshworks_app else None,
+            "job_id": freshworks_job.id if freshworks_job else None,
+            "title": "Review Freshworks Submission Approval Packet",
+            "message": (
+                "Inspect your tailored resume and cover letter in Approvals before confirming "
+                "external application submission."
+            ),
+            "reminder_type": "follow_up",
+            "scheduled_for": now + timedelta(days=1, hours=4),
+        },
+    )
+    for rem_spec in reminder_specs:
+        existing_rem = await session.scalar(
+            select(Reminder).where(
+                Reminder.user_id == user.id,
+                Reminder.dedup_key == rem_spec["dedup_key"],
+            )
+        )
+        if existing_rem is None:
+            session.add(
+                Reminder(
+                    user_id=user.id,
+                    application_id=rem_spec["application_id"],
+                    job_id=rem_spec["job_id"],
+                    title=str(rem_spec["title"]),
+                    message=str(rem_spec["message"]),
+                    reminder_type=str(rem_spec["reminder_type"]),
+                    dedup_key=str(rem_spec["dedup_key"]),
+                    scheduled_for=rem_spec["scheduled_for"],
+                    user_timezone="Asia/Kolkata",
+                    channel="in_app",
+                    status="SCHEDULED",
+                )
+            )
+
+
 async def seed_user_workspace(email: str) -> dict[str, Any]:
     """Run idempotent seeding for the specified user account."""
     settings = get_settings()
@@ -789,6 +1079,12 @@ async def seed_user_workspace(email: str) -> dict[str, Any]:
                 apps_by_company=apps_by_company,
                 cover_letter=cover_letter,
             )
+            await _ensure_phase8_and_9_records(
+                session,
+                user=user,
+                jobs_by_company=jobs_by_company,
+                apps_by_company=apps_by_company,
+            )
             await session.commit()
 
             return {
@@ -797,6 +1093,7 @@ async def seed_user_workspace(email: str) -> dict[str, Any]:
                 "matched_jobs": recommended.total,
                 "applications_seeded": len(apps_by_company),
                 "preserved_resume_id": str(source_resume.id) if source_resume else None,
+                "phase8_9_seeded": True,
             }
     finally:
         await engine.dispose()

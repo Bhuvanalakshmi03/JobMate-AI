@@ -11,7 +11,7 @@ JobMate AI uses a **Modular Monolithic Architecture** (`backend/app/`) paired wi
 - `app/database/`: Async SQLAlchemy 2.0 engine, `UTCDateTime`/`UUIDPrimaryKeyMixin` mixins, and Alembic migrations.
 - `app/observability/middleware.py`: `RequestContextMiddleware` propagating `X-Request-ID`, baseline security headers, and latency telemetry.
 
-### Domain Modules & Integrations (Phases 2–7)
+### Domain Modules & Integrations (Phases 2–9)
 - `app/integrations/oauth/google.py`: Google OAuth 2.0 / OIDC adapter (`GoogleOAuthClient`).
 - `app/integrations/storage/local.py`: Private non-overwriting file storage (`LocalPrivateStorage`).
 - `app/integrations/document_parser/extractor.py`: PDF/DOCX signature validation and text extraction via PyMuPDF and `python-docx`.
@@ -19,7 +19,7 @@ JobMate AI uses a **Modular Monolithic Architecture** (`backend/app/`) paired wi
 - `app/integrations/job_search/openai_web_search.py`: Live web-search job discovery adapter (`OpenAIWebSearchJobProvider`).
 - `app/integrations/chroma/store.py`: Dedicated vector-store interface (`VectorStoreProtocol`, `ChromaVectorStore` HTTP v2 client, `InMemoryVectorStore`).
 - `app/integrations/calendar/google_calendar.py`: Google Calendar API v3 client (`GoogleCalendarClient`, `CalendarProviderProtocol`) for upcoming event reads and human-approved event creation.
-- `app/modules/authentication/`: `User`, `UserSession`, `OAuthState` (supports login & incremental `calendar_connect` flow), `AuthService`, and `/api/v1/auth/*`.
+- `app/modules/authentication/`: `User`, `UserSession`, `OAuthState` (supports login & incremental `calendar_connect` flow), `AuthService`, account export/deletion lifecycle (`lifecycle.py`), and `/api/v1/auth/*`.
 - `app/modules/profile/`: `UserProfile`, `UserSkill`, `ProfileService`, and `/api/v1/profile/*`.
 - `app/modules/resume/`: `Resume`, `ResumeFact`, separated parser/extractor/validator/tasks/service, and `/api/v1/resumes/*`.
 - `app/modules/jobs/`: `Job`, `SavedJob`, canonical fingerprint deduplication, Redis search caching, `JobDiscoveryService`, and `/api/v1/jobs/*`.
@@ -31,13 +31,15 @@ JobMate AI uses a **Modular Monolithic Architecture** (`backend/app/`) paired wi
 - `app/modules/agents/`: `WorkflowRun`, `AgentOrchestrationService` (workflow checkpoint pause/resume), and `/api/v1/agents/*`.
 - `app/modules/approvals/`: `ApprovalRequest`, `ApprovalService` enforcing human confirmation before external side effects (including `submit_application` and `create_calendar_event`), and `/api/v1/approvals/*`.
 - `app/modules/calendar/`: `GoogleCalendarConnection` (Fernet-encrypted token storage + automatic refresh), `CalendarService`, and `/api/v1/calendar/*`.
-- `app/modules/copilot/`: `CopilotConversation`, `CopilotMessage`, 15 user-scoped OpenAI tools (`toolkit.py`), `CopilotChatService`, and `/api/v1/copilot/*`.
+- `app/modules/copilot/`: `CopilotConversation`, `CopilotMessage`, 19 user-scoped OpenAI tools (`toolkit.py`) with approved Career Memory context injection (`service.py`), `CopilotChatService`, and `/api/v1/copilot/*`.
 - `app/modules/interviews/`: `InterviewSession`, `InterviewQuestion`, `InterviewAnswer`, `InterviewFeedback`, rubric evaluation & skill-gap analyzer (`engine.py`, `service.py`), and `/api/v1/interviews/*`.
-- `backend/scripts/seed_user_data.py`: Idempotent realistic workspace data seeder preserving existing resumes and `ResumeFact` records.
+- `app/modules/memory/`: `CareerMemory`, consent-gated `CareerMemoryService`, and `/api/v1/memory/*`.
+- `app/modules/reminders/`: `Reminder`, `ReminderService` (timezone UTC normalization, `dedup_key` deduplication, bounded retry backoff), Celery beat/worker task (`tasks.py`), and `/api/v1/reminders/*`.
+- `backend/scripts/seed_user_data.py`: Idempotent realistic workspace data seeder (jobs, applications, workflows, interviews, Career Memory, and reminders) preserving existing resumes and `ResumeFact` records.
 - `app/repositories/audit_repository.py`: Shared immutable audit logging repository.
 
 ## Frontend Layer Boundaries
-- `src/services/`: Centralized `api-client.ts`, `health-service.ts`, `auth-service.ts`, `profile-service.ts`, `resume-service.ts`, `job-service.ts`, `document-service.ts`, `application-service.ts`, `agent-service.ts`, `approval-service.ts`, `calendar-service.ts`, `copilot-service.ts`.
+- `src/services/`: Centralized `api-client.ts`, `health-service.ts`, `auth-service.ts`, `profile-service.ts`, `resume-service.ts`, `job-service.ts`, `document-service.ts`, `application-service.ts`, `agent-service.ts`, `approval-service.ts`, `calendar-service.ts`, `copilot-service.ts`, `interview-service.ts`, `memory-service.ts`, `reminder-service.ts`.
 - `src/features/authentication/`: `AuthProvider`/`useAuth`, `ProtectedRoute`, `LoginPage`.
 - `src/features/profile/`: `ProfilePage`, `SkillsManager`, profile/skills hooks.
 - `src/features/resume/`: `ResumesPage`, `ResumeAnalysisPage`, `ResumeFactCard`, resume hooks.
@@ -48,5 +50,7 @@ JobMate AI uses a **Modular Monolithic Architecture** (`backend/app/`) paired wi
 - `src/features/calendar/`: `WeeklyCalendarPage`, `WeeklyCalendarCard` (strict 7-day upcoming schedule + pending calendar proposals), and `useCalendar` hooks for Google Calendar connection status, upcoming events, and OAuth connect/disconnect.
 - `src/features/copilot/`: `CopilotChatPanel` and `useCopilotChat` hooks for session management, tool-calling transcripts, and inline approval cards.
 - `src/features/interviews/`: `InterviewsPage`, `InterviewSessionPage`, mock interview rubric breakdown, and skill-gap roadmap hooks.
+- `src/features/reminders/`: `RemindersPage` and `useReminders` hooks for timezone-aware reminder scheduling, filtering, due dispatch, cancellation, and dismissal.
+- `src/features/memory/`: `MemoryAndPrivacyPage` and `useMemory` hooks for privacy consent controls, approved Career Memory CRUD, JSON data export, and account deletion.
 - `src/features/approvals/`: `ApprovalsPage`, human approval decision hooks.
 - `src/features/dashboard/`: `FoundationStatusPage`.
