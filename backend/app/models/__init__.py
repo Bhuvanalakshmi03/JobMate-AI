@@ -2,6 +2,7 @@
 
 from app.database.base import Base
 from app.models.audit_log import AuditLog
+from app.modules.applications.models import Application, ApplicationHistory
 from app.modules.authentication.models import OAuthState, User, UserSession
 from app.modules.documents.models import GeneratedDocument
 from app.modules.jobs.models import Job, SavedJob
@@ -23,4 +24,6 @@ __all__ = [
     "SavedJob",
     "JobMatch",
     "GeneratedDocument",
+    "Application",
+    "ApplicationHistory",
 ]
