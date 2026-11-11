@@ -92,6 +92,8 @@ class Settings(BaseSettings):
     storage_provider: Literal["local", "s3"] = "local"
     storage_bucket: str = ""
     local_storage_path: str = "./storage"
+    max_resume_size_bytes: int = Field(default=5 * 1024 * 1024, ge=1024, le=25 * 1024 * 1024)
+    max_resume_pages: int = Field(default=15, ge=1, le=50)
 
     # Frontend & CORS
     frontend_url: str = "http://localhost:5173"

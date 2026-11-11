@@ -25,15 +25,16 @@ frontend/.vite/
 frontend/coverage/
 frontend/playwright-report/
 frontend/test-results/
+frontend/*.tsbuildinfo
 npm-debug.log*
 
 # Local runtime data & storage
-storage/
-uploads/
+/storage/
+/uploads/
 *.db
 *.sqlite
 *.sqlite3
-chroma_data/
+/chroma_data/
 
 # IDE & OS
 .DS_Store
