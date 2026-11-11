@@ -12,6 +12,7 @@ import {
   applicationStatusTone,
 } from "../../../types/application";
 import { formatDisplayDate } from "../../applications/utils/dates";
+import { WeeklyCalendarCard } from "../../calendar/components/WeeklyCalendarCard";
 
 function statusTone(value: string): "success" | "warning" | "danger" | "neutral" {
   if (value === "ok" || value === "ready" || value === "healthy") return "success";
@@ -84,7 +85,7 @@ export function FoundationStatusPage() {
           description={
             error instanceof Error
               ? error.message
-              : "Could not reach the CareerPilot FastAPI backend."
+              : "Could not reach the JobMate AI FastAPI backend."
           }
           tone="error"
         />
@@ -220,6 +221,8 @@ export function FoundationStatusPage() {
           </div>
         </Card>
       )}
+
+      {!error && <WeeklyCalendarCard compact redirectTo="/" />}
     </div>
   );
 }

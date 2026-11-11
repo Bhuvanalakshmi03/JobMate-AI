@@ -44,7 +44,9 @@ def extract_session_token(request: Request, cookie_name: str) -> str:
             return parts[1].strip()
         raise AuthenticationError("Malformed Authorization header.")
 
-    cookie_token = request.cookies.get(cookie_name)
+    cookie_token = request.cookies.get(cookie_name) or request.cookies.get(
+        "careerpilot_session"
+    )
     if cookie_token and cookie_token.strip():
         return cookie_token.strip()
 

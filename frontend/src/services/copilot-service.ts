@@ -8,16 +8,21 @@ import type {
 
 export const copilotService = {
   listConversations: (): Promise<ConversationListResponse> =>
-    apiRequest<ConversationListResponse>("/copilot/conversations"),
+    apiRequest<ConversationListResponse>("/copilot/conversations", {
+      timeoutMs: 30000,
+    }),
 
   createConversation: (title?: string): Promise<ConversationSummary> =>
     apiRequest<ConversationSummary>("/copilot/conversations", {
       method: "POST",
+      timeoutMs: 30000,
       body: JSON.stringify({ title: title ?? null }),
     }),
 
   getConversation: (conversationId: string): Promise<ConversationDetailResponse> =>
-    apiRequest<ConversationDetailResponse>(`/copilot/conversations/${conversationId}`),
+    apiRequest<ConversationDetailResponse>(`/copilot/conversations/${conversationId}`, {
+      timeoutMs: 30000,
+    }),
 
   updateConversation: (
     conversationId: string,
@@ -25,12 +30,14 @@ export const copilotService = {
   ): Promise<ConversationSummary> =>
     apiRequest<ConversationSummary>(`/copilot/conversations/${conversationId}`, {
       method: "PATCH",
+      timeoutMs: 30000,
       body: JSON.stringify(payload),
     }),
 
   deleteConversation: (conversationId: string): Promise<void> =>
     apiRequest<void>(`/copilot/conversations/${conversationId}`, {
       method: "DELETE",
+      timeoutMs: 30000,
     }),
 
   sendMessage: (conversationId: string, message: string): Promise<ChatTurnResponse> =>

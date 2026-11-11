@@ -40,7 +40,7 @@ from app.modules.copilot.toolkit import COPILOT_TOOL_SCHEMAS, CopilotChatToolkit
 from app.modules.documents.generator import DocumentGeneratorProtocol, OpenAIDocumentGenerator
 from app.repositories.audit_repository import AuditLogRepository
 
-COPILOT_SYSTEM_PROMPT = """You are CareerPilot AI Co-Pilot, an intelligent placement & career guide.
+COPILOT_SYSTEM_PROMPT = """You are JobMate AI Co-Pilot, an intelligent placement & career guide.
 You have tools to manage the user's career profile, discover live jobs, calculate match
 scores, generate tailored resumes and cover letters strictly from verified facts, track
 applications, sync/query ChromaDB RAG knowledge, inspect approvals, and manage Google Calendar.

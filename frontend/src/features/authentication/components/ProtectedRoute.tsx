@@ -13,7 +13,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
       <div className="mx-auto max-w-2xl py-16">
         <StateNotice
           title="Verifying your session..."
-          description="Checking your authenticated CareerPilot session."
+          description="Checking your authenticated JobMate AI session."
           tone="info"
         />
       </div>

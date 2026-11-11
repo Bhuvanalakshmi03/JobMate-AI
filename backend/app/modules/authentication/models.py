@@ -12,7 +12,7 @@ from app.database.base import Base, UTCDateTime, UTCTimestampMixin, UUIDPrimaryK
 
 
 class User(UUIDPrimaryKeyMixin, UTCTimestampMixin, Base):
-    """Registered CareerPilot AI student/user account."""
+    """Registered JobMate AI student/user account."""
 
     __tablename__ = "users"
     __table_args__ = (

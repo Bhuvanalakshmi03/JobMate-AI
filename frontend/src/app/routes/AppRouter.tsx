@@ -7,6 +7,7 @@ import { ApplicationsPage } from "../../features/applications/pages/Applications
 import { ApprovalsPage } from "../../features/approvals/pages/ApprovalsPage";
 import { ProtectedRoute } from "../../features/authentication/components/ProtectedRoute";
 import { LoginPage } from "../../features/authentication/pages/LoginPage";
+import { WeeklyCalendarPage } from "../../features/calendar/pages/WeeklyCalendarPage";
 import { FoundationStatusPage } from "../../features/dashboard/pages/FoundationStatusPage";
 import { DocumentEditorPage } from "../../features/documents/pages/DocumentEditorPage";
 import { DocumentsPage } from "../../features/documents/pages/DocumentsPage";
@@ -126,6 +127,16 @@ export function AppRouter() {
           <ProtectedRoute>
             <AppShell>
               <AgentCopilotPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/calendar"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <WeeklyCalendarPage />
             </AppShell>
           </ProtectedRoute>
         }

@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.api.v1.routers import api_v1_router
 from app.core.config import Settings, get_settings
@@ -20,7 +21,7 @@ logger = get_logger(__name__)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
-    """Create and configure the CareerPilot AI FastAPI application."""
+    """Create and configure the JobMate AI FastAPI application."""
     resolved_settings = settings or get_settings()
     configure_logging(resolved_settings.log_level)
 
@@ -30,8 +31,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         application.state.settings = resolved_settings
         application.state.db_engine = engine
         application.state.db_session_factory = create_session_factory(engine)
+        if not resolved_settings.is_sqlite:
+            try:
+                async with engine.connect() as conn:
+                    await conn.execute(text("SELECT 1"))
+            except Exception as exc:
+                logger.warning(
+                    "Database connection warmup probe failed",
+                    extra={"exception_class": exc.__class__.__name__},
+                )
         logger.info(
-            "CareerPilot backend started",
+            "JobMate AI backend started",
             extra={
                 "app_env": resolved_settings.app_env,
                 "version": resolved_settings.app_version,
@@ -41,7 +51,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             yield
         finally:
             await engine.dispose()
-            logger.info("CareerPilot backend stopped")
+            logger.info("JobMate AI backend stopped")
 
     application = FastAPI(
         title=resolved_settings.app_name,

@@ -11,7 +11,7 @@ export function useCalendarStatus() {
   });
 }
 
-export function useCalendarEvents(enabled: boolean, daysAhead = 14, maxResults = 10) {
+export function useCalendarEvents(enabled: boolean, daysAhead = 7, maxResults = 50) {
   return useQuery({
     queryKey: ["calendar", "events", daysAhead, maxResults],
     queryFn: () => calendarService.listEvents(daysAhead, maxResults),

@@ -1,7 +1,7 @@
-# CareerPilot AI — Architecture Overview
+# JobMate AI — Architecture Overview
 
 ## Pattern
-CareerPilot AI uses a **Modular Monolithic Architecture** (`backend/app/`) paired with a **Feature-Modular React Frontend** (`frontend/src/`).
+JobMate AI uses a **Modular Monolithic Architecture** (`backend/app/`) paired with a **Feature-Modular React Frontend** (`frontend/src/`).
 
 ## Backend Layer Boundaries
 
@@ -44,7 +44,7 @@ CareerPilot AI uses a **Modular Monolithic Architecture** (`backend/app/`) paire
 - `src/features/documents/`: `DocumentsPage`, `DocumentEditorPage`, document generation/version hooks.
 - `src/features/applications/`: `ApplicationsPage`, `ApplicationDetailsPage`, application hooks and date utilities.
 - `src/features/agents/`: `AgentCopilotPage` (tabbed Co-Pilot Chat & Calendar + LangGraph Workflows & RAG), workflow/RAG hooks.
-- `src/features/calendar/`: `useCalendar` hooks for Google Calendar connection status, upcoming events, and OAuth connect/disconnect.
+- `src/features/calendar/`: `WeeklyCalendarPage`, `WeeklyCalendarCard` (strict 7-day upcoming schedule + pending calendar proposals), and `useCalendar` hooks for Google Calendar connection status, upcoming events, and OAuth connect/disconnect.
 - `src/features/copilot/`: `CopilotChatPanel` and `useCopilotChat` hooks for session management, tool-calling transcripts, and inline approval cards.
 - `src/features/approvals/`: `ApprovalsPage`, human approval decision hooks.
 - `src/features/dashboard/`: `FoundationStatusPage`.

@@ -1,4 +1,4 @@
-# CareerPilot AI — Database Schema
+# JobMate AI — Database Schema
 
 ## Primary Database Standards
 - **Engine:** External/managed PostgreSQL (SQLite restricted to unit tests).

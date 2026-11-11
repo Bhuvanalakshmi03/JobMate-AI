@@ -1,7 +1,7 @@
 [project]
-name = "careerpilot-backend"
+name = "jobmate-ai-backend"
 version = "0.1.0"
-description = "CareerPilot AI FastAPI modular monolithic backend"
+description = "JobMate AI FastAPI modular monolithic backend"
 requires-python = ">=3.11"
 
 [tool.ruff]

@@ -1,5 +1,6 @@
 import {
   Briefcase,
+  CalendarDays,
   ClipboardList,
   Compass,
   FilePenLine,
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
   { to: "/jobs", label: "Job Discovery", icon: Briefcase },
   { to: "/documents", label: "Document Studio", icon: FilePenLine },
   { to: "/applications", label: "Applications", icon: ClipboardList },
+  { to: "/calendar", label: "Weekly Calendar", icon: CalendarDays },
   { to: "/copilot", label: "AI Co-Pilot", icon: Sparkles },
   { to: "/approvals", label: "Approvals", icon: ShieldCheck },
 ];
@@ -49,7 +51,7 @@ export function AppShell({ children }: AppShellProps) {
               <Compass className="h-5 w-5" aria-hidden="true" />
             </div>
             <div>
-              <p className="text-sm font-semibold tracking-tight text-white">CareerPilot AI</p>
+              <p className="text-sm font-semibold tracking-tight text-white">JobMate AI</p>
               <p className="text-xs text-slate-400">Placement Co-Pilot</p>
             </div>
           </div>

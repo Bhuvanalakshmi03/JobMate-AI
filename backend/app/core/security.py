@@ -16,8 +16,10 @@ from cryptography.fernet import Fernet, InvalidToken
 from app.core.exceptions import AuthenticationError
 
 JWT_ALGORITHM = "HS256"
-JWT_ISSUER = "careerpilot-api"
-JWT_AUDIENCE = "careerpilot-client"
+JWT_ISSUER = "jobmate-ai-api"
+JWT_AUDIENCE = "jobmate-ai-client"
+LEGACY_JWT_ISSUER = "careerpilot-api"
+LEGACY_JWT_AUDIENCE = "careerpilot-client"
 
 
 def generate_random_token(nbytes: int = 32) -> str:
@@ -72,8 +74,8 @@ def decode_session_token(*, token: str, secret_key: str) -> tuple[uuid.UUID, uui
             token,
             secret_key,
             algorithms=[JWT_ALGORITHM],
-            issuer=JWT_ISSUER,
-            audience=JWT_AUDIENCE,
+            issuer=[JWT_ISSUER, LEGACY_JWT_ISSUER],
+            audience=[JWT_AUDIENCE, LEGACY_JWT_AUDIENCE],
             options={"require": ["sub", "sid", "exp", "iat", "iss", "aud"]},
         )
         user_id = uuid.UUID(str(claims["sub"]))

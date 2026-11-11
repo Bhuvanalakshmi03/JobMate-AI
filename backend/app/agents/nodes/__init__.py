@@ -1,1 +1,2 @@
-"""Specialist LangGraph nodes for CareerPilot AI multi-agent workflows."""
+"""Specialist LangGraph nodes for JobMate AI multi-agent workflows."""
+

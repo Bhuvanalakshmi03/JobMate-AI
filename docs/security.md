@@ -1,4 +1,4 @@
-# CareerPilot AI — Security Controls
+# JobMate AI — Security Controls
 
 ## Authentication & Sessions
 - **OAuth 2.0 / OIDC:** Uses single-use hashed CSRF `state`, OIDC `nonce` verification, PKCE (`S256`), and Google ID token verification checking `iss`, `aud`, `exp`, and `email_verified`.

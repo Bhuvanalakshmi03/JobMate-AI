@@ -11,7 +11,7 @@ async def test_liveness_endpoint_returns_ok(async_client: httpx.AsyncClient) -> 
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "ok"
-    assert data["service"] == "CareerPilot AI"
+    assert data["service"] == "JobMate AI"
     assert data["environment"] == "testing"
     assert "X-Request-ID" in response.headers
     assert response.headers["X-Content-Type-Options"] == "nosniff"

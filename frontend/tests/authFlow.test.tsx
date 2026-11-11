@@ -36,7 +36,7 @@ describe("Authentication flow", () => {
     renderRouterAt("/profile");
 
     await waitFor(() => {
-      expect(screen.getByText("Sign in to CareerPilot AI")).toBeInTheDocument();
+      expect(screen.getByText("Sign in to JobMate AI")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /continue with google/i })).toBeInTheDocument();
     });
     expect(screen.queryByText(/local development sign-in/i)).not.toBeInTheDocument();
@@ -57,7 +57,7 @@ describe("Authentication flow", () => {
       is_demo_auth: true,
       user: {
         id: "u-1",
-        email: "student@careerpilot.local",
+        email: "student@jobmate.local",
         full_name: "Demo Student",
         oauth_provider: "dev",
         timezone: "UTC",

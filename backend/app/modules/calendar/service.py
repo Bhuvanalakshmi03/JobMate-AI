@@ -38,6 +38,20 @@ from app.modules.calendar.schemas import (
 from app.repositories.audit_repository import AuditLogRepository
 
 
+def _parse_event_boundary(raw_iso: str) -> datetime | None:
+    text = (raw_iso or "").strip()
+    if not text:
+        return None
+    normalized = text.replace("Z", "+00:00")
+    try:
+        dt = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=UTC)
+    return dt.astimezone(UTC)
+
+
 class CalendarService:
     """Coordinates encrypted Google Calendar token storage, refresh, and event CRUD."""
 
@@ -173,8 +187,8 @@ class CalendarService:
         self,
         *,
         user_id: uuid.UUID,
-        days_ahead: int = 14,
-        max_results: int = 15,
+        days_ahead: int = 7,
+        max_results: int = 50,
     ) -> CalendarEventsResponse:
         conn = await self._repo.get_by_user_id(user_id)
         if conn is None:
@@ -189,6 +203,17 @@ class CalendarService:
             time_max_iso=max_dt.isoformat(),
             max_results=max_results,
         )
+        filtered: list[CalendarEventRecord] = []
+        for record in records:
+            start_dt = _parse_event_boundary(record.start_iso)
+            end_dt = _parse_event_boundary(record.end_iso) or start_dt
+            if start_dt is None:
+                filtered.append(record)
+                continue
+            if start_dt < max_dt and (end_dt is None or end_dt >= now):
+                filtered.append(record)
+
+        filtered.sort(key=lambda item: item.start_iso)
         return CalendarEventsResponse(
             connected=True,
             items=[
@@ -202,7 +227,7 @@ class CalendarService:
                     html_link=r.html_link,
                     status=r.status,
                 )
-                for r in records
+                for r in filtered
             ],
         )
 
@@ -248,3 +273,4 @@ class CalendarService:
             user_id=user_id,
             resource_type="google_calendar",
         )
+

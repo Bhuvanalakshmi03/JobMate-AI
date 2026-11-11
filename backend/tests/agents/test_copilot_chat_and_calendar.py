@@ -48,17 +48,36 @@ class FakeCalendarProvider:
         access_token: str,
         time_min_iso: str,
         time_max_iso: str | None = None,
-        max_results: int = 15,
+        max_results: int = 50,
     ) -> list[CalendarEventRecord]:
         _ = (access_token, time_min_iso, time_max_iso, max_results)
+        now = datetime.now(UTC)
+        in_window_start = (now + timedelta(days=1)).isoformat()
+        in_window_end = (now + timedelta(days=1, hours=1)).isoformat()
+        out_of_window_future = (now + timedelta(days=10)).isoformat()
+        out_of_window_future_end = (now + timedelta(days=10, hours=1)).isoformat()
+        out_of_window_past = (now - timedelta(days=2)).isoformat()
+        out_of_window_past_end = (now - timedelta(days=2) + timedelta(hours=1)).isoformat()
         return [
+            CalendarEventRecord(
+                event_id="evt-past-ignored",
+                summary="Past Interview",
+                start_iso=out_of_window_past,
+                end_iso=out_of_window_past_end,
+            ),
             CalendarEventRecord(
                 event_id="evt-existing-1",
                 summary="Mock Technical Screen",
-                start_iso="2026-11-12T10:00:00Z",
-                end_iso="2026-11-12T11:00:00Z",
+                start_iso=in_window_start,
+                end_iso=in_window_end,
                 location="Google Meet",
                 html_link="https://calendar.google.com/event?eid=existing1",
+            ),
+            CalendarEventRecord(
+                event_id="evt-future-ignored",
+                summary="Two Weeks Out Sync",
+                start_iso=out_of_window_future,
+                end_iso=out_of_window_future_end,
             ),
             *self.created_events,
         ]
@@ -417,7 +436,9 @@ async def test_calendar_oauth_copilot_chat_tool_calling_and_approval_execution(
 
             events_res = await client.get("/api/v1/calendar/events", headers=headers_a)
             assert events_res.status_code == 200
-            assert len(events_res.json()["items"]) == 1
+            items = events_res.json()["items"]
+            assert len(items) == 1
+            assert items[0]["event_id"] == "evt-existing-1"
 
             # 3. Create Co-Pilot chat session & send message invoking calendar tool
             conv_res = await client.post("/api/v1/copilot/conversations", headers=headers_a)

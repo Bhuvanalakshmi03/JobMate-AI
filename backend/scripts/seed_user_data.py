@@ -1,4 +1,4 @@
-"""Idempotent realistic data seeder for an existing CareerPilot user account.
+"""Idempotent realistic data seeder for an existing JobMate AI user account.
 
 Populates realistic jobs, explainable JobMatch scores, tailored grounded documents,
 multi-stage applications + history, pending human approvals, workflow runs, and a
@@ -711,7 +711,7 @@ async def _ensure_workflow_approvals_and_chat(
                 user_id=user.id,
                 role="assistant",
                 content=(
-                    "Welcome back, **MUKILAN S**! Your CareerPilot workspace is loaded with "
+                    "Welcome back, **MUKILAN S**! Your JobMate AI workspace is loaded with "
                     "real pipeline data:\n\n"
                     "- **Active Applications**: Zoho Corporation (`INTERVIEW_SCHEDULED`), "
                     "Freshworks (`AWAITING_APPROVAL`), Xtract.io (`SUBMITTED`), Chargebee "
@@ -803,7 +803,7 @@ async def seed_user_workspace(email: str) -> dict[str, Any]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Seed realistic CareerPilot data for a user.")
+    parser = argparse.ArgumentParser(description="Seed realistic JobMate AI data for a user.")
     parser.add_argument("--email", default="mukilan069@gmail.com", help="Target user email.")
     args = parser.parse_args()
     summary = asyncio.run(seed_user_workspace(args.email))

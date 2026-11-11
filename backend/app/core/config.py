@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     )
 
     # Application
-    app_name: str = Field(default="CareerPilot AI", min_length=1)
+    app_name: str = Field(default="JobMate AI", min_length=1)
     app_version: str = Field(default="0.1.0", min_length=1)
     app_env: AppEnvironment = "development"
     app_secret_key: str = Field(
@@ -73,7 +73,7 @@ class Settings(BaseSettings):
     # Session & Auth
     session_ttl_seconds: int = Field(default=604800, ge=300, le=2592000)
     oauth_state_ttl_seconds: int = Field(default=600, ge=60, le=3600)
-    session_cookie_name: str = Field(default="careerpilot_session", min_length=1)
+    session_cookie_name: str = Field(default="jobmate_session", min_length=1)
     session_cookie_secure: bool = False
     dev_auth_enabled: bool = False
 

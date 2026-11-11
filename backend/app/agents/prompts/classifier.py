@@ -1,6 +1,6 @@
 """Prompt template for classifying user co-pilot requests into minimal specialist routes."""
 
-TASK_CLASSIFIER_SYSTEM_PROMPT = """You are the CareerPilot Workflow Router.
+TASK_CLASSIFIER_SYSTEM_PROMPT = """You are the JobMate AI Workflow Router.
 Classify the student's request into one focused workflow category:
 - "job_discovery": searching for jobs/internships or ranking roles matching criteria
 - "application_prep": preparing match score, tailored resume, cover letter, and

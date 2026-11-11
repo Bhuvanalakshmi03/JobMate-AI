@@ -1,15 +1,12 @@
 import {
-  Calendar,
   CalendarPlus,
   Check,
   Edit3,
-  ExternalLink,
   MessageSquarePlus,
   Send,
   ShieldCheck,
   Sparkles,
   Trash2,
-  Unlink,
   Wrench,
   X,
 } from "lucide-react";
@@ -28,12 +25,7 @@ import {
   useApproveActionMutation,
   useRejectActionMutation,
 } from "../../approvals/hooks/useApprovals";
-import {
-  useCalendarEvents,
-  useCalendarStatus,
-  useConnectCalendarMutation,
-  useDisconnectCalendarMutation,
-} from "../../calendar/hooks/useCalendar";
+import { WeeklyCalendarCard } from "../../calendar/components/WeeklyCalendarCard";
 import {
   useConversationDetail,
   useConversationsList,
@@ -45,7 +37,7 @@ import {
 
 const STARTER_PROMPTS = [
   "Summarize my active applications, top job matches, and pending approvals",
-  "Check my upcoming Google Calendar schedule for the next 14 days",
+  "Check my upcoming Google Calendar schedule for the next 7 days",
   "Propose a 45-minute technical interview prep block on Google Calendar for Friday 4 PM IST",
   "Prepare a tailored cover letter and submission request for Freshworks",
 ];
@@ -81,12 +73,6 @@ export function CopilotChatPanel({ calendarJustConnected = false }: CopilotChatP
   const updateConversationMutation = useUpdateConversationMutation();
   const deleteConversationMutation = useDeleteConversationMutation();
   const sendMessageMutation = useSendMessageMutation();
-
-  const calendarStatusQuery = useCalendarStatus();
-  const isCalendarConnected = Boolean(calendarStatusQuery.data?.connected);
-  const calendarEventsQuery = useCalendarEvents(isCalendarConnected, 14, 6);
-  const connectCalendarMutation = useConnectCalendarMutation();
-  const disconnectCalendarMutation = useDisconnectCalendarMutation();
 
   const approveMutation = useApproveActionMutation();
   const rejectMutation = useRejectActionMutation();
@@ -158,18 +144,6 @@ export function CopilotChatPanel({ calendarJustConnected = false }: CopilotChatP
   const handleFormSubmit = async (e: FormEvent) => {
     e.preventDefault();
     await handleSendText(draftMessage);
-  };
-
-  const handleConnectCalendar = async () => {
-    setChatError(null);
-    try {
-      const res = await connectCalendarMutation.mutateAsync("/copilot");
-      window.location.assign(res.authorization_url);
-    } catch (err) {
-      setChatError(
-        err instanceof Error ? err.message : "Unable to initiate Google Calendar connection."
-      );
-    }
   };
 
   return (
@@ -294,95 +268,13 @@ export function CopilotChatPanel({ calendarJustConnected = false }: CopilotChatP
             )}
           </Card>
 
-          <Card
-            title="Google Calendar"
-            subtitle="Read schedule & propose interview or prep blocks"
-            action={
-              isCalendarConnected ? (
-                <StatusBadge label="CONNECTED" tone="success" />
-              ) : (
-                <StatusBadge label="DISCONNECTED" tone="neutral" />
-              )
-            }
-          >
-            {isCalendarConnected ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between gap-2 text-xs text-slate-600">
-                  <span className="truncate">
-                    Account: <strong>{calendarStatusQuery.data?.google_email ?? "Google"}</strong>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => void disconnectCalendarMutation.mutateAsync()}
-                    disabled={disconnectCalendarMutation.isPending}
-                    className="inline-flex shrink-0 items-center gap-1 rounded border border-slate-200 px-2 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-50"
-                  >
-                    <Unlink className="h-3 w-3" aria-hidden="true" />
-                    Disconnect
-                  </button>
-                </div>
-
-                {calendarEventsQuery.isPending ? (
-                  <p className="text-xs text-slate-500">Loading upcoming events...</p>
-                ) : (calendarEventsQuery.data?.items ?? []).length === 0 ? (
-                  <p className="text-xs text-slate-500">
-                    No upcoming events in the next 14 days.
-                  </p>
-                ) : (
-                  <ul className="space-y-2">
-                    {(calendarEventsQuery.data?.items ?? []).map((evt) => (
-                      <li
-                        key={evt.event_id}
-                        className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-semibold text-slate-800">{evt.summary}</span>
-                          {evt.html_link && (
-                            <a
-                              href={evt.html_link}
-                              target="_blank"
-                              rel="noreferrer"
-                              aria-label={`Open ${evt.summary} in Google Calendar`}
-                              className="text-indigo-600 hover:text-indigo-800"
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                            </a>
-                          )}
-                        </div>
-                        <p className="mt-0.5 text-[11px] text-slate-500">
-                          {formatDisplayDate(evt.start_iso)}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <p className="text-xs text-slate-600">
-                  Connect Google Calendar to let Co-Pilot read upcoming availability and schedule
-                  interview / prep blocks (every write requires your explicit confirmation).
-                </p>
-                <button
-                  type="button"
-                  onClick={() => void handleConnectCalendar()}
-                  disabled={connectCalendarMutation.isPending}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 disabled:opacity-50"
-                >
-                  <Calendar className="h-4 w-4" aria-hidden="true" />
-                  {connectCalendarMutation.isPending
-                    ? "Redirecting to Google..."
-                    : "Connect Google Calendar"}
-                </button>
-              </div>
-            )}
-          </Card>
+          <WeeklyCalendarCard compact redirectTo="/copilot" />
         </div>
 
         {/* Main Chat Transcript & Tool Execution Window */}
         <div className="lg:col-span-8">
           <Card
-            title={activeConversation?.title ?? "CareerPilot Co-Pilot Chat"}
+            title={activeConversation?.title ?? "JobMate AI Co-Pilot Chat"}
             subtitle="OpenAI function calling across Profile, Jobs, Matches, Documents, Applications, Approvals & Google Calendar"
           >
             <div className="flex min-h-[460px] flex-col justify-between gap-4">
@@ -393,7 +285,7 @@ export function CopilotChatPanel({ calendarJustConnected = false }: CopilotChatP
                       <Sparkles className="mt-0.5 h-5 w-5 text-indigo-600" aria-hidden="true" />
                       <div>
                         <p className="text-sm font-semibold text-slate-900">
-                          Control CareerPilot through natural conversation
+                          Control JobMate AI through natural conversation
                         </p>
                         <p className="mt-1 text-xs text-slate-600">
                           Ask Co-Pilot to search jobs, inspect your match score, update tracked
@@ -564,3 +456,4 @@ export function CopilotChatPanel({ calendarJustConnected = false }: CopilotChatP
     </div>
   );
 }
+

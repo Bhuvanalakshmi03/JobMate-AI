@@ -28,7 +28,7 @@ class CalendarEventRecord:
 
 
 class CalendarProviderProtocol(Protocol):
-    """Protocol decoupling CareerPilot calendar actions from HTTP transport."""
+    """Protocol decoupling JobMate AI calendar actions from HTTP transport."""
 
     async def list_events(
         self,
@@ -36,7 +36,7 @@ class CalendarProviderProtocol(Protocol):
         access_token: str,
         time_min_iso: str,
         time_max_iso: str | None = None,
-        max_results: int = 15,
+        max_results: int = 50,
     ) -> list[CalendarEventRecord]: ...
 
     async def create_event(
@@ -121,13 +121,13 @@ class GoogleCalendarClient:
         access_token: str,
         time_min_iso: str,
         time_max_iso: str | None = None,
-        max_results: int = 15,
+        max_results: int = 50,
     ) -> list[CalendarEventRecord]:
         params: dict[str, str] = {
             "singleEvents": "true",
             "orderBy": "startTime",
             "timeMin": time_min_iso,
-            "maxResults": str(max(1, min(max_results, 50))),
+            "maxResults": str(max(1, min(max_results, 100))),
         }
         if time_max_iso:
             params["timeMax"] = time_max_iso
@@ -182,3 +182,4 @@ class GoogleCalendarClient:
         if response.status_code == 404:
             return
         self._raise_for_error(response, action="delete event")
+

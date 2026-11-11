@@ -209,10 +209,10 @@ COPILOT_TOOL_SCHEMAS: list[dict[str, Any]] = [
     ),
     _tool_def(
         "list_calendar_events",
-        "Fetch upcoming events from the student's connected Google Calendar.",
+        "Fetch upcoming events from the student's connected Google Calendar (defaults to 7 days).",
         {
             "days_ahead": {"type": "integer", "minimum": 1, "maximum": 90},
-            "max_results": {"type": "integer", "minimum": 1, "maximum": 30},
+            "max_results": {"type": "integer", "minimum": 1, "maximum": 50},
         },
     ),
     _tool_def(
@@ -233,7 +233,7 @@ COPILOT_TOOL_SCHEMAS: list[dict[str, Any]] = [
 
 
 class CopilotChatToolkit:
-    """Executes user-isolated CareerPilot and Google Calendar tool calls from Co-Pilot Chat."""
+    """Executes user-isolated JobMate AI and Google Calendar tool calls from Co-Pilot Chat."""
 
     def __init__(
         self,
@@ -650,8 +650,8 @@ class CopilotChatToolkit:
     async def _list_calendar_events(self, args: dict[str, Any]) -> dict[str, Any]:
         res = await self._calendar.list_upcoming_events(
             user_id=self._user.id,
-            days_ahead=int(args.get("days_ahead") or 14),
-            max_results=int(args.get("max_results") or 15),
+            days_ahead=int(args.get("days_ahead") or 7),
+            max_results=int(args.get("max_results") or 50),
         )
         if not res.connected:
             return {

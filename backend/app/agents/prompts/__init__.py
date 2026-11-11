@@ -1,1 +1,2 @@
-"""Independent prompt templates for CareerPilot specialist agents."""
+"""Independent prompt templates for JobMate AI specialist agents."""
+

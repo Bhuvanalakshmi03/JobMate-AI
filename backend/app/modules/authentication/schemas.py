@@ -52,7 +52,7 @@ class AuthSessionResponse(BaseModel):
 class DevLoginRequest(BaseModel):
     """Development-only login request (disabled in staging and production)."""
 
-    email: str = Field(default="student@careerpilot.local", min_length=5, max_length=320)
+    email: str = Field(default="student@jobmate.local", min_length=5, max_length=320)
     full_name: str = Field(default="Demo Student", min_length=1, max_length=255)
     timezone: str = Field(default="UTC", min_length=1, max_length=64)
 

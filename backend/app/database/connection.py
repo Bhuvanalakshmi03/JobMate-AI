@@ -18,16 +18,22 @@ logger = get_logger(__name__)
 
 def create_db_engine(settings: Settings) -> AsyncEngine:
     """Create configured SQLAlchemy async engine with connection pooling for PostgreSQL."""
-    async_url, connect_args = settings.async_database_config
+    async_url, raw_connect_args = settings.async_database_config
+    connect_args = dict(raw_connect_args)
     engine_kwargs: dict[str, object] = {
         "echo": settings.db_echo,
         "pool_pre_ping": True,
     }
-    if connect_args:
-        engine_kwargs["connect_args"] = connect_args
     if not settings.is_sqlite:
+        if async_url.startswith("postgresql+asyncpg://"):
+            connect_args.setdefault("timeout", 15)
+            connect_args.setdefault("command_timeout", 30)
         engine_kwargs["pool_size"] = settings.db_pool_size
         engine_kwargs["max_overflow"] = settings.db_max_overflow
+        engine_kwargs["pool_recycle"] = 300
+        engine_kwargs["pool_timeout"] = 15
+    if connect_args:
+        engine_kwargs["connect_args"] = connect_args
 
     return create_async_engine(async_url, **engine_kwargs)
 

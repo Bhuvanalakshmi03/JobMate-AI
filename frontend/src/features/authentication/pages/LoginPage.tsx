@@ -24,7 +24,7 @@ export function LoginPage() {
     retry: false,
   });
 
-  const [devEmail, setDevEmail] = useState("student@careerpilot.local");
+  const [devEmail, setDevEmail] = useState("student@jobmate.local");
   const [devName, setDevName] = useState("Demo Student");
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -63,7 +63,7 @@ export function LoginPage() {
             <Compass className="h-6 w-6" aria-hidden="true" />
           </div>
           <h1 className="mt-4 text-2xl font-bold tracking-tight text-slate-900">
-            Sign in to CareerPilot AI
+            Sign in to JobMate AI
           </h1>
           <p className="mt-1.5 text-sm text-slate-600">
             Your human-approved placement co-pilot for resumes, job matching, and interview prep.

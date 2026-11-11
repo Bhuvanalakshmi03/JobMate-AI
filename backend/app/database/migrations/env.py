@@ -1,4 +1,4 @@
-"""Alembic migration environment configured from CareerPilot Settings."""
+"""Alembic migration environment configured from JobMate AI Settings."""
 
 from __future__ import annotations
 

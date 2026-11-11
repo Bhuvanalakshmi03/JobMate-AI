@@ -294,7 +294,7 @@ export function AgentCopilotPage() {
 
               <div>
                 <label htmlFor="copilot-task" className="block text-xs font-medium text-slate-700">
-                  Instruction for CareerPilot Agents
+                  Instruction for JobMate AI Agents
                 </label>
                 <textarea
                   id="copilot-task"

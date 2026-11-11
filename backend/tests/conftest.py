@@ -1,4 +1,4 @@
-"""Shared Pytest fixtures for CareerPilot backend tests."""
+"""Shared Pytest fixtures for JobMate AI backend tests."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ def reset_settings_cache(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture
 def test_db_path(tmp_path: Path) -> Path:
     """Provide an isolated temporary database file path per test."""
-    return tmp_path / "test_careerpilot.db"
+    return tmp_path / "test_jobmate.db"
 
 
 @pytest.fixture
@@ -33,7 +33,7 @@ def test_settings(test_db_path: Path) -> Settings:
     """Provide isolated test Settings backed by a temporary SQLite database."""
     return Settings(
         app_env="testing",
-        app_secret_key="test-secret-key-for-careerpilot-unit-suite-1234",
+        app_secret_key="test-secret-key-for-jobmate-unit-suite-123456",
         database_url=f"sqlite+aiosqlite:///{test_db_path}",
         redis_url="redis://127.0.0.1:6399/15",
         log_level="INFO",

@@ -66,7 +66,7 @@ class JobDiscoveryService:
             sort_keys=True,
         )
         digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()
-        return f"careerpilot:job_search:{digest}"
+        return f"jobmate:job_search:{digest}"
 
     async def _get_cached_job_ids(self, cache_key: str) -> list[uuid.UUID] | None:
         client: aioredis.Redis | None = None

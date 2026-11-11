@@ -42,6 +42,14 @@ def _clear_session_cookie(response: Response, settings: Settings) -> None:
         samesite="lax",
         path="/",
     )
+    if settings.session_cookie_name != "careerpilot_session":
+        response.delete_cookie(
+            key="careerpilot_session",
+            httponly=True,
+            secure=settings.session_cookie_secure,
+            samesite="lax",
+            path="/",
+        )
 
 
 def _client_ip(request: Request) -> str | None:

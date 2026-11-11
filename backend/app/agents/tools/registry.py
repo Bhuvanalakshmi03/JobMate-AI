@@ -303,7 +303,7 @@ class AgentToolset:
                     job_id=job_uuid,
                     tailored_resume_id=resume_uuid,
                     cover_letter_id=cover_uuid,
-                    notes=f"Prepared by CareerPilot Agent Workflow {workflow_id}",
+                    notes=f"Prepared by JobMate AI Agent Workflow {workflow_id}",
                 ),
             )
             resolved_app_id = app_detail.id

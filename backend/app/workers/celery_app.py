@@ -1,4 +1,4 @@
-"""Celery application configured from centralized CareerPilot Settings."""
+"""Celery application configured from centralized JobMate AI Settings."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ def create_celery_app() -> Celery:
     """Create and configure the Celery worker application."""
     settings = get_settings()
     celery = Celery(
-        "careerpilot",
+        "jobmate",
         broker=settings.redis_url,
         backend=settings.redis_url,
     )
@@ -32,7 +32,7 @@ def create_celery_app() -> Celery:
 celery_app = create_celery_app()
 
 
-@celery_app.task(name="careerpilot.health.ping")  # type: ignore[untyped-decorator]
+@celery_app.task(name="jobmate.health.ping")  # type: ignore[untyped-decorator]
 def ping_worker() -> str:
     """Simple diagnostic ping task for worker readiness checks."""
     return "pong"

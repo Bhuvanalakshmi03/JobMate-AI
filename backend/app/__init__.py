@@ -1,2 +1,2 @@
-"""CareerPilot AI backend package."""
+"""JobMate AI backend package."""
 

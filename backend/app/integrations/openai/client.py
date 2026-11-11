@@ -195,9 +195,11 @@ class OpenAIChatClient:
             except RateLimitError as exc:
                 last_exc = exc
                 status_code = getattr(exc, "status_code", 429)
-                if "insufficient_quota" in str(exc).lower():
+                err_lower = str(exc).lower()
+                if "insufficient_quota" in err_lower or "credit_balance_exhausted" in err_lower:
                     raise AppRateLimitError(
-                        "AI provider quota exceeded. Check billing or usage limits."
+                        "OpenAI API credit balance exhausted or quota exceeded. Check OpenAI "
+                        "billing limits."
                     ) from exc
                 if attempt < self._max_retries:
                     await asyncio.sleep(0.5 * (2**attempt))

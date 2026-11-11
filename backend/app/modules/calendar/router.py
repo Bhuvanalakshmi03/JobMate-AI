@@ -68,8 +68,8 @@ async def connect_google_calendar(
 async def list_calendar_events(
     current_user: CurrentUserDep,
     service: CalendarServiceDep,
-    days_ahead: Annotated[int, Query(ge=1, le=90)] = 14,
-    max_results: Annotated[int, Query(ge=1, le=50)] = 15,
+    days_ahead: Annotated[int, Query(ge=1, le=90)] = 7,
+    max_results: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> CalendarEventsResponse:
     return await service.list_upcoming_events(
         user_id=current_user.id,
@@ -102,3 +102,4 @@ async def disconnect_google_calendar(
     service: CalendarServiceDep,
 ) -> None:
     await service.disconnect(user_id=current_user.id)
+

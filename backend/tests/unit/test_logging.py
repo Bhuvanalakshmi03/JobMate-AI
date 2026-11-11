@@ -34,7 +34,7 @@ def test_structured_json_formatter_includes_request_context() -> None:
     token = request_id_ctx.set("req-abc-123")
     try:
         record = logging.LogRecord(
-            name="careerpilot.test",
+            name="jobmate.test",
             level=logging.INFO,
             pathname=__file__,
             lineno=1,

@@ -1,6 +1,6 @@
-# CareerPilot AI — API v1 Documentation
+# JobMate AI — API v1 Documentation
 
-All backend routes are versioned under `/api/v1`. Protected routes require a valid session cookie (`careerpilot_session`) or `Authorization: Bearer <token>` header.
+All backend routes are versioned under `/api/v1`. Protected routes require a valid session cookie (`jobmate_session` / legacy `careerpilot_session`) or `Authorization: Bearer <token>` header.
 
 ## Health & Auth Endpoints (Phases 1–2)
 - `GET /api/v1/health`, `GET /api/v1/health/ready`
@@ -49,7 +49,7 @@ Allowed statuses: `SAVED`, `PREPARING`, `AWAITING_APPROVAL`, `SUBMITTED`, `INTER
 ## Google Calendar Endpoints (`20261111_0008`)
 - `GET /api/v1/calendar/status` — Check whether the current user has connected Google Calendar (`connected`, `google_email`, `scopes`, `token_expires_at`).
 - `GET /api/v1/calendar/connect` — Initiate incremental Google Calendar OAuth consent (`?mode=json&redirect_to=/copilot`), reusing `/api/v1/auth/google/callback`.
-- `GET /api/v1/calendar/events` — Read upcoming primary Google Calendar events (`?days_ahead=14&max_results=15`).
+- `GET /api/v1/calendar/events` — Read upcoming primary Google Calendar events strictly within `[now, now + days_ahead]` (`?days_ahead=7&max_results=50`, defaulting to 1 week ahead).
 - `POST /api/v1/calendar/events` — Directly create a Google Calendar event (`201 Created`; Co-Pilot tools use `propose_calendar_event` -> human approval first).
 - `DELETE /api/v1/calendar/disconnect` — Remove stored Google Calendar connection and encrypted tokens (`204 No Content`).
 

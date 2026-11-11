@@ -45,7 +45,7 @@ class UTCDateTime(TypeDecorator[datetime]):
 
 
 class Base(DeclarativeBase):
-    """Base class for all CareerPilot ORM models."""
+    """Base class for all JobMate AI ORM models."""
 
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
 

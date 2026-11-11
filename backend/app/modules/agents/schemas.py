@@ -12,7 +12,7 @@ WorkflowTaskType = Literal["auto", "job_discovery", "application_prep", "career_
 
 
 class WorkflowCreateRequest(BaseModel):
-    """Trigger a CareerPilot LangGraph multi-agent workflow."""
+    """Trigger a JobMate AI LangGraph multi-agent workflow."""
 
     requested_task: str = Field(min_length=3, max_length=2000)
     task_type: WorkflowTaskType = "auto"
@@ -96,3 +96,4 @@ class RAGQueryResponse(BaseModel):
 
     query: str
     hits: list[RAGHitResponse]
+

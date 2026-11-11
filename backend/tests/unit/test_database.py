@@ -23,7 +23,7 @@ async def test_alembic_upgrade_and_audit_log_persistence(
     db_file = tmp_path / "migration_test.db"
     settings = Settings(
         app_env="testing",
-        app_secret_key="test-secret-key-for-careerpilot-unit-suite-1234",
+        app_secret_key="test-secret-key-for-jobmate-unit-suite-123456",
         database_url=f"sqlite+aiosqlite:///{db_file}",
     )
 

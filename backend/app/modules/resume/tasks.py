@@ -59,7 +59,7 @@ async def _run_resume_analysis_async(
         await engine.dispose()
 
 
-@celery_app.task(name="careerpilot.resume.analyze")  # type: ignore[untyped-decorator]
+@celery_app.task(name="jobmate.resume.analyze")  # type: ignore[untyped-decorator]
 def analyze_resume_task(
     resume_id_str: str,
     user_id_str: str,

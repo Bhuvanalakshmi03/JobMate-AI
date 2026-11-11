@@ -20,7 +20,7 @@ from app.modules.resume.models import ResumeFact
 
 logger = get_logger(__name__)
 
-CAREER_COLLECTION_NAME = "careerpilot_career_context"
+CAREER_COLLECTION_NAME = "jobmate_career_context"
 
 
 @dataclass(frozen=True, slots=True)

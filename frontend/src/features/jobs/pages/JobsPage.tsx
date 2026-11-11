@@ -176,7 +176,7 @@ export function JobsPage() {
             recommendedQuery.data?.items.length === 0 && (
               <StateNotice
                 title="No jobs to rank yet"
-                description="Run a job discovery search first so CareerPilot can score and rank opportunities for your profile."
+                description="Run a job discovery search first so JobMate AI can score and rank opportunities for your profile."
                 tone="empty"
               />
             )}

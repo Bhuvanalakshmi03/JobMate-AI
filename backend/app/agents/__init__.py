@@ -1,1 +1,2 @@
-"""LangGraph multi-agent orchestration package for CareerPilot AI."""
+"""LangGraph multi-agent orchestration package for JobMate AI."""
+

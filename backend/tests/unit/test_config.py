@@ -10,7 +10,7 @@ from app.core.config import Settings
 
 def test_settings_defaults_valid_in_development() -> None:
     settings = Settings(app_env="development")
-    assert settings.app_name == "CareerPilot AI"
+    assert settings.app_name == "JobMate AI"
     assert settings.sync_database_url.startswith("postgresql+psycopg2://")
     assert settings.cors_allowed_origins == ["http://localhost:5173", "http://127.0.0.1:5173"]
 

@@ -28,6 +28,7 @@ export interface RequestOptions extends Omit<RequestInit, "headers"> {
 }
 
 const DEFAULT_BASE_URL = "/api/v1";
+const DEFAULT_TIMEOUT_MS = 30000;
 
 export function getApiBaseUrl(): string {
   const configured = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -40,17 +41,20 @@ export function setUnauthorizedHandler(handler: (() => void) | null): void {
   unauthorizedHandler = handler;
 }
 
-export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { timeoutMs = 15000, headers = {}, signal, ...rest } = options;
+function isAbortLikeError(err: unknown): boolean {
+  if (err instanceof DOMException && err.name === "AbortError") return true;
+  if (err instanceof Error && err.name === "AbortError") return true;
+  return false;
+}
+
+async function performFetch<T>(url: string, options: RequestOptions): Promise<T> {
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, headers = {}, signal, ...rest } = options;
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
 
   if (signal) {
     signal.addEventListener("abort", () => controller.abort(), { once: true });
   }
-
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  const url = `${getApiBaseUrl()}${normalizedPath}`;
 
   try {
     const response = await fetch(url, {
@@ -76,6 +80,14 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
     if (!response.ok) {
       const apiError = (parsed as ApiErrorResponse | null)?.error;
+      if (!isJson && response.status >= 502 && response.status <= 504) {
+        throw new ApiClientError({
+          status: response.status,
+          code: "GATEWAY_UNAVAILABLE",
+          message:
+            "The JobMate AI API server is temporarily unavailable or restarting. Please retry.",
+        });
+      }
       throw new ApiClientError({
         status: response.status,
         code: apiError?.code ?? `HTTP_${response.status}`,
@@ -90,7 +102,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     if (err instanceof ApiClientError) {
       throw err;
     }
-    if (err instanceof DOMException && err.name === "AbortError") {
+    if (isAbortLikeError(err)) {
       throw new ApiClientError({
         status: 408,
         code: "REQUEST_TIMEOUT",
@@ -100,10 +112,30 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     throw new ApiClientError({
       status: 0,
       code: "NETWORK_ERROR",
-      message: "Unable to reach the CareerPilot API server.",
+      message:
+        "Unable to reach the JobMate AI API server. Verify the backend is running and retry.",
     });
   } finally {
     window.clearTimeout(timeoutId);
   }
 }
 
+export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const url = `${getApiBaseUrl()}${normalizedPath}`;
+  const method = (options.method ?? "GET").toUpperCase();
+  const canRetry = method === "GET";
+
+  try {
+    return await performFetch<T>(url, options);
+  } catch (err) {
+    const isTransient =
+      err instanceof ApiClientError &&
+      (err.code === "NETWORK_ERROR" || err.code === "GATEWAY_UNAVAILABLE");
+    if (canRetry && isTransient) {
+      await new Promise((resolve) => window.setTimeout(resolve, 350));
+      return await performFetch<T>(url, options);
+    }
+    throw err;
+  }
+}

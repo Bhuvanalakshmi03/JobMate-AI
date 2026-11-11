@@ -8,7 +8,7 @@ from typing import Any, Protocol
 
 from app.integrations.openai.client import LLMClientProtocol
 
-RESUME_TAILORING_SYSTEM_PROMPT = """You are the CareerPilot Resume Tailoring Agent.
+RESUME_TAILORING_SYSTEM_PROMPT = """You are the JobMate AI Resume Tailoring Agent.
 Your task is to generate an ATS-friendly tailored resume strictly from the candidate's
 VERIFIED career profile, verified skills, and verified resume facts.
 
@@ -49,7 +49,7 @@ STRICT FACTUALITY & SECURITY RULES:
 }
 """
 
-COVER_LETTER_SYSTEM_PROMPT = """You are the CareerPilot Cover Letter Agent.
+COVER_LETTER_SYSTEM_PROMPT = """You are the JobMate AI Cover Letter Agent.
 Write a concise, genuine, role-specific cover letter strictly grounded in the candidate's
 VERIFIED career profile, verified skills, and verified resume facts.
 
@@ -65,7 +65,7 @@ STRICT FACTUALITY & SECURITY RULES:
 }
 """
 
-APPLICATION_NOTE_SYSTEM_PROMPT = """You are the CareerPilot Cover Letter Agent.
+APPLICATION_NOTE_SYSTEM_PROMPT = """You are the JobMate AI Cover Letter Agent.
 Write a short, high-signal application note for a recruiter or application form strictly
 grounded in <verified_candidate_facts>.
 

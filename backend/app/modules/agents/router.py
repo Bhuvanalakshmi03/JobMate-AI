@@ -36,7 +36,7 @@ AgentServiceDep = Annotated[AgentOrchestrationService, Depends(get_agent_service
     "/workflows",
     response_model=WorkflowRunResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Run a CareerPilot LangGraph multi-agent workflow",
+    summary="Run a JobMate AI LangGraph multi-agent workflow",
 )
 async def create_workflow(
     payload: WorkflowCreateRequest,
@@ -96,3 +96,4 @@ async def query_rag_context(
     service: AgentServiceDep,
 ) -> RAGQueryResponse:
     return await service.query_rag(user=current_user, payload=payload)
+

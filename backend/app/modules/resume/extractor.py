@@ -7,7 +7,7 @@ from typing import Protocol
 
 from app.integrations.openai.client import LLMClientProtocol
 
-RESUME_ANALYST_SYSTEM_PROMPT = """You are the CareerPilot Resume Analyst Agent.
+RESUME_ANALYST_SYSTEM_PROMPT = """You are the JobMate AI Resume Analyst Agent.
 Your task is to extract ONLY factual information explicitly present in the candidate's resume,
 and provide an objective resume quality evaluation.
 

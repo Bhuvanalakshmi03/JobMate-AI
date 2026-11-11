@@ -45,5 +45,29 @@ describe("apiRequest", () => {
       requestId: "req-99",
     } satisfies Partial<ApiClientError>);
   });
+
+  it("retries transient GET network failures once and reports JobMate AI message on persistent error", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })
+      );
+
+    const recovered = await apiRequest<{ ok: boolean }>("/health");
+    expect(recovered).toEqual({ ok: true });
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new TypeError("Failed to fetch"));
+    await expect(
+      apiRequest("/copilot/conversations", { method: "POST", body: "{}" })
+    ).rejects.toMatchObject({
+      code: "NETWORK_ERROR",
+      message: expect.stringContaining("JobMate AI API server"),
+    });
+  });
 });
 

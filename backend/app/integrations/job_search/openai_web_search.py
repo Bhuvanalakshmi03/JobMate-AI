@@ -17,7 +17,7 @@ _BLOCKED_PLACEHOLDER_HOSTS = frozenset(
     {"example.com", "www.example.com", "example.org", "localhost", "127.0.0.1"}
 )
 
-JOB_SEARCH_SYSTEM_PROMPT = """You are the CareerPilot Job Researcher Agent using live web search.
+JOB_SEARCH_SYSTEM_PROMPT = """You are the JobMate AI Job Researcher Agent using live web search.
 Use the web_search tool to find REAL, currently open jobs or internships matching the query.
 
 STRICT INTEGRITY & SAFETY RULES:

@@ -107,7 +107,7 @@ def render_application_note_markdown(structured: ApplicationNoteStructured) -> s
 
 
 def _safe_download_filename(title: str, ext: ExportFormat) -> str:
-    slug = re.sub(r"[^a-zA-Z0-9._-]+", "_", title).strip("._")[:80] or "careerpilot_document"
+    slug = re.sub(r"[^a-zA-Z0-9._-]+", "_", title).strip("._")[:80] or "jobmate_document"
     return f"{slug}.{ext}"
 
 

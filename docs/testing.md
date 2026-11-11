@@ -1,4 +1,4 @@
-# CareerPilot AI — Testing Guide
+# JobMate AI — Testing Guide
 
 ## Backend Test Suite
 - **Framework:** Pytest + `pytest-asyncio` + HTTPX (`ASGITransport`).
