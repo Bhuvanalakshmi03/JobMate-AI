@@ -1,4 +1,4 @@
-# CareerPilot AI
+# JobMate AI
 
 Intelligent Placement Co-Pilot for Students (PS-06), built with a modular monolithic architecture combining FastAPI, PostgreSQL, Redis/Celery, LangGraph, OpenAI, ChromaDB, Adzuna, and a React + TypeScript frontend.
 
