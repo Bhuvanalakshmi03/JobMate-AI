@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { FoundationStatusPage } from "../src/features/dashboard/pages/FoundationStatusPage";
+import { applicationService } from "../src/services/application-service";
 import { healthService } from "../src/services/health-service";
 
 function renderPage() {
@@ -20,7 +21,11 @@ function renderPage() {
 }
 
 describe("FoundationStatusPage", () => {
-  it("renders backend liveness and readiness status on success", async () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("renders backend liveness, readiness status, and application summary on success", async () => {
     vi.spyOn(healthService, "getLiveness").mockResolvedValue({
       status: "ok",
       service: "CareerPilot AI",
@@ -39,18 +44,26 @@ describe("FoundationStatusPage", () => {
         redis: { status: "healthy", detail: null },
       },
     });
+    vi.spyOn(applicationService, "getSummary").mockResolvedValue({
+      total_applications: 4,
+      counts_by_status: { PREPARING: 1, SUBMITTED: 2, INTERVIEW_SCHEDULED: 1 },
+      upcoming_deadlines: [],
+    });
 
     renderPage();
 
     await waitFor(() => {
       expect(screen.getByText("CareerPilot AI")).toBeInTheDocument();
       expect(screen.getByText("READY")).toBeInTheDocument();
+      expect(screen.getByText("Application Pipeline Summary")).toBeInTheDocument();
+      expect(screen.getByText("4")).toBeInTheDocument();
     });
   });
 
   it("renders error state when backend fails", async () => {
     vi.spyOn(healthService, "getLiveness").mockRejectedValue(new Error("API offline"));
     vi.spyOn(healthService, "getReadiness").mockRejectedValue(new Error("API offline"));
+    vi.spyOn(applicationService, "getSummary").mockRejectedValue(new Error("API offline"));
 
     renderPage();
 

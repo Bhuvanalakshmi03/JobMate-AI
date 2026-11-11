@@ -21,3 +21,13 @@ All backend routes are versioned under `/api/v1`. Protected routes require a val
 - `GET /api/v1/documents/{document_id}` — Get document details and full version history.
 - `PATCH /api/v1/documents/{document_id}` — Edit document content, preserving prior versions when `create_new_version=true`.
 - `GET /api/v1/documents/{document_id}/download` — Export document as `pdf`, `docx`, or `md`.
+
+## Application Tracking Endpoints (Phase 6)
+Allowed statuses: `SAVED`, `PREPARING`, `AWAITING_APPROVAL`, `SUBMITTED`, `INTERVIEW_SCHEDULED`, `REJECTED`, `OFFER_RECEIVED`, `WITHDRAWN`.
+- `GET /api/v1/applications` — List tracked applications owned by authenticated user (`?status=...&limit=...&offset=...`).
+- `GET /api/v1/applications/summary` — Get pipeline counts by status (`counts_by_status`) and `upcoming_deadlines`.
+- `POST /api/v1/applications` — Create a tracked application linked to a discovered job or custom entry (`201 Created`).
+- `GET /api/v1/applications/{application_id}` — Get application details, `allowed_next_statuses`, and transition `history`.
+- `PATCH /api/v1/applications/{application_id}` — Update metadata, deadlines, linked documents, or notes (status changes require `/transition`).
+- `POST /api/v1/applications/{application_id}/transition` — Transition status via backend state-machine validation with optional `note`.
+- `DELETE /api/v1/applications/{application_id}` — Delete a tracked application (`204 No Content`).

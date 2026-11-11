@@ -1,10 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
-import { RefreshCw } from "lucide-react";
+import { ArrowRight, CalendarClock, RefreshCw } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import { Card } from "../../../components/ui/Card";
 import { StateNotice } from "../../../components/ui/StateNotice";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
+import { applicationService } from "../../../services/application-service";
 import { healthService } from "../../../services/health-service";
+import {
+  applicationStatusLabel,
+  applicationStatusTone,
+} from "../../../types/application";
+import { formatDisplayDate } from "../../applications/utils/dates";
 
 function statusTone(value: string): "success" | "warning" | "danger" | "neutral" {
   if (value === "ok" || value === "ready" || value === "healthy") return "success";
@@ -26,12 +33,19 @@ export function FoundationStatusPage() {
     retry: false,
   });
 
+  const summaryQuery = useQuery({
+    queryKey: ["applications", "summary"],
+    queryFn: applicationService.getSummary,
+    retry: false,
+  });
+
   const isLoading = livenessQuery.isPending || readinessQuery.isPending;
   const error = livenessQuery.error ?? readinessQuery.error;
 
   const refetchAll = () => {
     void livenessQuery.refetch();
     void readinessQuery.refetch();
+    void summaryQuery.refetch();
   };
 
   return (
@@ -124,6 +138,87 @@ export function FoundationStatusPage() {
             </ul>
           </Card>
         </div>
+      )}
+
+      {summaryQuery.data && (
+        <Card
+          title="Application Pipeline Summary"
+          subtitle="Live placement tracking counts and upcoming deadlines"
+          action={
+            <Link
+              to="/applications"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+            >
+              Open Tracker
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+          }
+        >
+          <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-4">
+              <div className="rounded-lg bg-slate-50 p-3">
+                <p className="text-xs text-slate-500">Total Applications</p>
+                <p className="mt-1 text-xl font-bold text-slate-900">
+                  {summaryQuery.data.total_applications}
+                </p>
+              </div>
+              <div className="rounded-lg bg-slate-50 p-3">
+                <p className="text-xs text-slate-500">Preparing</p>
+                <p className="mt-1 text-xl font-bold text-indigo-700">
+                  {summaryQuery.data.counts_by_status["PREPARING"] ?? 0}
+                </p>
+              </div>
+              <div className="rounded-lg bg-slate-50 p-3">
+                <p className="text-xs text-slate-500">Submitted</p>
+                <p className="mt-1 text-xl font-bold text-emerald-700">
+                  {summaryQuery.data.counts_by_status["SUBMITTED"] ?? 0}
+                </p>
+              </div>
+              <div className="rounded-lg bg-slate-50 p-3">
+                <p className="text-xs text-slate-500">Interviews</p>
+                <p className="mt-1 text-xl font-bold text-amber-700">
+                  {summaryQuery.data.counts_by_status["INTERVIEW_SCHEDULED"] ?? 0}
+                </p>
+              </div>
+            </div>
+
+            {summaryQuery.data.upcoming_deadlines.length > 0 && (
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Upcoming Deadlines
+                </h3>
+                <ul className="mt-2 divide-y divide-slate-100 text-sm">
+                  {summaryQuery.data.upcoming_deadlines.map((item) => (
+                    <li
+                      key={item.id}
+                      className="flex flex-wrap items-center justify-between gap-2 py-2 first:pt-0 last:pb-0"
+                    >
+                      <div>
+                        <Link
+                          to={`/applications/${item.id}`}
+                          className="font-medium text-slate-900 hover:text-indigo-600"
+                        >
+                          {item.role_title}
+                        </Link>
+                        <span className="ml-2 text-xs text-slate-500">{item.company_name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <StatusBadge
+                          label={applicationStatusLabel(item.status)}
+                          tone={applicationStatusTone(item.status)}
+                        />
+                        <span className="inline-flex items-center gap-1 text-xs text-amber-700">
+                          <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
+                          {formatDisplayDate(item.deadline_at)}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </Card>
       )}
     </div>
   );

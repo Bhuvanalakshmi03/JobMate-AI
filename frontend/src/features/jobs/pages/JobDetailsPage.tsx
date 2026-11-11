@@ -1,11 +1,12 @@
-import { ArrowLeft, Bookmark, ExternalLink, Sparkles } from "lucide-react";
+import { ArrowLeft, Bookmark, ClipboardPlus, ExternalLink, Sparkles } from "lucide-react";
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { Card } from "../../../components/ui/Card";
 import { StateNotice } from "../../../components/ui/StateNotice";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
 import type { JobMatch } from "../../../types/job";
+import { useCreateApplicationMutation } from "../../applications/hooks/useApplications";
 import { MatchScore } from "../components/MatchScore";
 import {
   useCalculateJobMatchMutation,
@@ -15,9 +16,11 @@ import {
 
 export function JobDetailsPage() {
   const { jobId = "" } = useParams<{ jobId: string }>();
+  const navigate = useNavigate();
   const detailQuery = useJobDetail(jobId);
   const matchMutation = useCalculateJobMatchMutation();
   const saveMutation = useToggleSaveJobMutation();
+  const trackMutation = useCreateApplicationMutation();
   const [computedMatch, setComputedMatch] = useState<JobMatch | null>(null);
 
   const job = detailQuery.data;
@@ -26,6 +29,22 @@ export function JobDetailsPage() {
     if (!jobId) return;
     const result = await matchMutation.mutateAsync(jobId);
     setComputedMatch(result);
+  };
+
+  const handleTrackApplication = async () => {
+    if (!job) return;
+    try {
+      const created = await trackMutation.mutateAsync({
+        job_id: job.id,
+        company_name: job.company,
+        role_title: job.title,
+        location: job.location,
+        job_url: job.external_url,
+      });
+      navigate(`/applications/${created.id}`);
+    } catch {
+      // Displayed via trackMutation.error
+    }
   };
 
   return (
@@ -96,6 +115,15 @@ export function JobDetailsPage() {
                 >
                   Tailor Documents
                 </Link>
+                <button
+                  type="button"
+                  disabled={trackMutation.isPending}
+                  onClick={() => void handleTrackApplication()}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+                >
+                  <ClipboardPlus className="h-3.5 w-3.5" aria-hidden="true" />
+                  {trackMutation.isPending ? "Tracking..." : "Track Application"}
+                </button>
               </div>
             }
           >
@@ -125,6 +153,14 @@ export function JobDetailsPage() {
               </div>
             </div>
           </Card>
+
+          {trackMutation.error && (
+            <StateNotice
+              title="Unable to track application"
+              description={trackMutation.error.message}
+              tone="error"
+            />
+          )}
 
           {matchMutation.error && (
             <StateNotice

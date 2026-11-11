@@ -22,3 +22,7 @@
 
 ### Phase 5 (`20261111_0005`)
 - `generated_documents`: Versioned tailored resumes, cover letters, and application notes (`id`, `user_id` FK -> `users.id`, `job_id` FK -> `jobs.id`, `source_resume_id` FK -> `resumes.id`, `document_type`, `title`, `version_group_id`, `version`, `content_markdown`, `structured_content`, `factuality_report`, `is_user_edited`, `model_used`, `tokens_used`, `created_at`, `updated_at`, unique `(version_group_id, version)`).
+
+### Phase 6 (`20261111_0006`)
+- `applications`: Tracked student job applications (`id`, `user_id` FK -> `users.id`, `job_id` FK -> `jobs.id` nullable ondelete `SET NULL`, `tailored_resume_id` FK -> `generated_documents.id`, `cover_letter_id` FK -> `generated_documents.id`, `company_name`, `role_title`, `job_url`, `location`, `status`, `applied_at`, `deadline_at`, `follow_up_at`, `notes`, `created_at`, `updated_at`, unique `uq_applications_user_job` on `(user_id, job_id)`, indexes `ix_applications_user_status` and `ix_applications_user_deadline`).
+- `application_history`: Immutable status transition timeline (`id`, `application_id` FK -> `applications.id`, `user_id` FK -> `users.id`, `from_status`, `to_status`, `note`, `changed_at`, index `ix_app_history_app_changed`).

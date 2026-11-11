@@ -1,5 +1,6 @@
 import {
   Briefcase,
+  ClipboardList,
   Compass,
   FilePenLine,
   FileText,
@@ -24,6 +25,7 @@ const NAV_ITEMS = [
   { to: "/resumes", label: "Resume Intelligence", icon: FileText },
   { to: "/jobs", label: "Job Discovery", icon: Briefcase },
   { to: "/documents", label: "Document Studio", icon: FilePenLine },
+  { to: "/applications", label: "Applications", icon: ClipboardList },
 ];
 
 export function AppShell({ children }: AppShellProps) {

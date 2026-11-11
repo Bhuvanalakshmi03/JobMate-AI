@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AppShell } from "../../components/layout/AppShell";
+import { ApplicationDetailsPage } from "../../features/applications/pages/ApplicationDetailsPage";
+import { ApplicationsPage } from "../../features/applications/pages/ApplicationsPage";
 import { ProtectedRoute } from "../../features/authentication/components/ProtectedRoute";
 import { LoginPage } from "../../features/authentication/pages/LoginPage";
 import { FoundationStatusPage } from "../../features/dashboard/pages/FoundationStatusPage";
@@ -92,6 +94,26 @@ export function AppRouter() {
           <ProtectedRoute>
             <AppShell>
               <DocumentEditorPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/applications"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <ApplicationsPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/applications/:applicationId"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <ApplicationDetailsPage />
             </AppShell>
           </ProtectedRoute>
         }
