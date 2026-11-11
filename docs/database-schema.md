@@ -36,3 +36,9 @@
 - `google_calendar_connections`: Per-user encrypted OAuth credentials (`id`, `user_id` FK -> `users.id` unique, `google_email`, `scopes`, `encrypted_access_token`, `encrypted_refresh_token`, `token_expires_at`, `created_at`, `updated_at`).
 - `copilot_conversations`: Persistent Co-Pilot chat sessions (`id`, `user_id` FK -> `users.id`, `title`, `is_archived`, `last_message_at`, `created_at`, `updated_at`, index `ix_copilot_conversations_user_recent`).
 - `copilot_messages`: Multi-turn conversation log (`id`, `conversation_id` FK -> `copilot_conversations.id`, `user_id` FK -> `users.id`, `role`, `content`, `tool_calls`, `approval_ids`, `tokens_used`, `created_at`, index `ix_copilot_messages_conv_created`).
+
+### Phase 8 — Interview Preparation (`20261111_0009`)
+- `interview_sessions`: Tailored mock interview sessions (`id`, `user_id` FK -> `users.id`, `job_id` FK -> `jobs.id`, `application_id` FK -> `applications.id`, `title`, `target_role`, `company_name`, `focus_area`, `difficulty`, `status`, `question_count`, `overall_score`, `created_at`, `updated_at`).
+- `interview_questions`: Ordered session prompts (`id`, `session_id` FK -> `interview_sessions.id`, `user_id` FK -> `users.id`, `order_index`, `category`, `prompt`, `expected_topics`, `difficulty`, `guidance`, `created_at`).
+- `interview_answers`: Candidate responses (`id`, `question_id` FK -> `interview_questions.id` unique, `session_id` FK -> `interview_sessions.id`, `user_id` FK -> `users.id`, `answer_text`, `time_spent_seconds`, `submitted_at`, `created_at`, `updated_at`).
+- `interview_feedback`: Documented rubric evaluations and improvement plans (`id`, `session_id` FK -> `interview_sessions.id` unique, `user_id` FK -> `users.id`, `overall_score`, `rubric_scores`, `strengths`, `weaknesses`, `question_evaluations`, `skill_improvement_plan`, `summary`, `model_used`, `tokens_used`, `evaluated_at`, `created_at`, `updated_at`).

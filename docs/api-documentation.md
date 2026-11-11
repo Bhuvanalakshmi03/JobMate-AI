@@ -59,7 +59,18 @@ Allowed statuses: `SAVED`, `PREPARING`, `AWAITING_APPROVAL`, `SUBMITTED`, `INTER
 - `GET /api/v1/copilot/conversations/{conversation_id}` — Load full conversation transcript, executed tool logs, and linked approval items.
 - `PATCH /api/v1/copilot/conversations/{conversation_id}` — Rename or archive a chat session.
 - `DELETE /api/v1/copilot/conversations/{conversation_id}` — Delete a chat session and its messages (`204 No Content`).
-- `POST /api/v1/copilot/conversations/{conversation_id}/messages` — Send a user turn, run OpenAI multi-turn function calling across 13 user-scoped tools, persist tool logs + proposed approvals, and return the assistant reply.
+- `POST /api/v1/copilot/conversations/{conversation_id}/messages` — Send a user turn, run OpenAI multi-turn function calling across 15 user-scoped tools, persist tool logs + proposed approvals, and return the assistant reply.
+
+## Interview Preparation Endpoints (Phase 8)
+- `GET /api/v1/interviews/skill-gap-plan` — Consolidated cross-job missing skills and interview weakness improvement plan.
+- `POST /api/v1/interviews` — Create a mock interview session with optional question generation (`201 Created`).
+- `GET /api/v1/interviews` — List mock interview sessions owned by the current user.
+- `GET /api/v1/interviews/{session_id}` — Retrieve session details, questions, submitted answers, and feedback.
+- `POST /api/v1/interviews/{session_id}/questions` — Generate additional targeted interview questions (`201 Created`).
+- `POST /api/v1/interviews/{session_id}/answers` — Submit or update an answer for a question (`201 Created`).
+- `POST /api/v1/interviews/{session_id}/evaluate` — Evaluate submitted answers using the 4-criterion rubric (`technical_accuracy`, `communication_clarity`, `star_structure`, `role_alignment`).
+- `GET /api/v1/interviews/{session_id}/feedback` — Retrieve persisted session evaluation feedback.
+- `DELETE /api/v1/interviews/{session_id}` — Delete a mock interview session (`204 No Content`).
 
 ## Workspace Seeding Script
 ```bash

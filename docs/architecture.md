@@ -31,7 +31,8 @@ JobMate AI uses a **Modular Monolithic Architecture** (`backend/app/`) paired wi
 - `app/modules/agents/`: `WorkflowRun`, `AgentOrchestrationService` (workflow checkpoint pause/resume), and `/api/v1/agents/*`.
 - `app/modules/approvals/`: `ApprovalRequest`, `ApprovalService` enforcing human confirmation before external side effects (including `submit_application` and `create_calendar_event`), and `/api/v1/approvals/*`.
 - `app/modules/calendar/`: `GoogleCalendarConnection` (Fernet-encrypted token storage + automatic refresh), `CalendarService`, and `/api/v1/calendar/*`.
-- `app/modules/copilot/`: `CopilotConversation`, `CopilotMessage`, 13 user-scoped OpenAI tools (`toolkit.py`), `CopilotChatService`, and `/api/v1/copilot/*`.
+- `app/modules/copilot/`: `CopilotConversation`, `CopilotMessage`, 15 user-scoped OpenAI tools (`toolkit.py`), `CopilotChatService`, and `/api/v1/copilot/*`.
+- `app/modules/interviews/`: `InterviewSession`, `InterviewQuestion`, `InterviewAnswer`, `InterviewFeedback`, rubric evaluation & skill-gap analyzer (`engine.py`, `service.py`), and `/api/v1/interviews/*`.
 - `backend/scripts/seed_user_data.py`: Idempotent realistic workspace data seeder preserving existing resumes and `ResumeFact` records.
 - `app/repositories/audit_repository.py`: Shared immutable audit logging repository.
 
@@ -46,5 +47,6 @@ JobMate AI uses a **Modular Monolithic Architecture** (`backend/app/`) paired wi
 - `src/features/agents/`: `AgentCopilotPage` (tabbed Co-Pilot Chat & Calendar + LangGraph Workflows & RAG), workflow/RAG hooks.
 - `src/features/calendar/`: `WeeklyCalendarPage`, `WeeklyCalendarCard` (strict 7-day upcoming schedule + pending calendar proposals), and `useCalendar` hooks for Google Calendar connection status, upcoming events, and OAuth connect/disconnect.
 - `src/features/copilot/`: `CopilotChatPanel` and `useCopilotChat` hooks for session management, tool-calling transcripts, and inline approval cards.
+- `src/features/interviews/`: `InterviewsPage`, `InterviewSessionPage`, mock interview rubric breakdown, and skill-gap roadmap hooks.
 - `src/features/approvals/`: `ApprovalsPage`, human approval decision hooks.
 - `src/features/dashboard/`: `FoundationStatusPage`.

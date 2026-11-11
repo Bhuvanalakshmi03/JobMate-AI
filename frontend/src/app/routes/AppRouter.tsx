@@ -11,6 +11,8 @@ import { WeeklyCalendarPage } from "../../features/calendar/pages/WeeklyCalendar
 import { FoundationStatusPage } from "../../features/dashboard/pages/FoundationStatusPage";
 import { DocumentEditorPage } from "../../features/documents/pages/DocumentEditorPage";
 import { DocumentsPage } from "../../features/documents/pages/DocumentsPage";
+import { InterviewSessionPage } from "../../features/interviews/pages/InterviewSessionPage";
+import { InterviewsPage } from "../../features/interviews/pages/InterviewsPage";
 import { JobDetailsPage } from "../../features/jobs/pages/JobDetailsPage";
 import { JobsPage } from "../../features/jobs/pages/JobsPage";
 import { ProfilePage } from "../../features/profile/pages/ProfilePage";
@@ -147,6 +149,26 @@ export function AppRouter() {
           <ProtectedRoute>
             <AppShell>
               <ApprovalsPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/interviews"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <InterviewsPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/interviews/:sessionId"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <InterviewSessionPage />
             </AppShell>
           </ProtectedRoute>
         }
