@@ -31,3 +31,17 @@ Allowed statuses: `SAVED`, `PREPARING`, `AWAITING_APPROVAL`, `SUBMITTED`, `INTER
 - `PATCH /api/v1/applications/{application_id}` — Update metadata, deadlines, linked documents, or notes (status changes require `/transition`).
 - `POST /api/v1/applications/{application_id}/transition` — Transition status via backend state-machine validation with optional `note`.
 - `DELETE /api/v1/applications/{application_id}` — Delete a tracked application (`204 No Content`).
+
+## Multi-Agent & RAG Endpoints (Phase 7)
+- `POST /api/v1/agents/workflows` — Trigger a LangGraph multi-agent workflow (`auto`, `job_discovery`, `application_prep`, `career_advisory`) (`201 Created`).
+- `GET /api/v1/agents/workflows` — List workflow runs owned by the authenticated user.
+- `GET /api/v1/agents/workflows/{workflow_id}` — Inspect workflow status, specialist outputs, validation flags, and execution trace.
+- `POST /api/v1/agents/rag/sync` — Index verified profile, skills, resume facts, and documents into vector storage.
+- `POST /api/v1/agents/rag/query` — Query user-isolated semantic RAG context.
+
+## Human Approval Endpoints (Phase 7)
+- `GET /api/v1/approvals` — List approval requests (`?status=PENDING|APPROVED|REJECTED|EXECUTED...`).
+- `POST /api/v1/approvals` — Prepare a standalone human-gated external action approval (`201 Created`).
+- `GET /api/v1/approvals/{approval_id}` — Inspect exact target destination, payload, and execution status.
+- `POST /api/v1/approvals/{approval_id}/approve` — Confirm and execute a pending external action and resume linked workflow.
+- `POST /api/v1/approvals/{approval_id}/reject` — Reject a pending external action and prevent execution.

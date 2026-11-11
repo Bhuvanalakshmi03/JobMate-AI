@@ -7,6 +7,7 @@ import {
   Layers,
   LogOut,
   ShieldCheck,
+  Sparkles,
   UserCheck,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -26,6 +27,8 @@ const NAV_ITEMS = [
   { to: "/jobs", label: "Job Discovery", icon: Briefcase },
   { to: "/documents", label: "Document Studio", icon: FilePenLine },
   { to: "/applications", label: "Applications", icon: ClipboardList },
+  { to: "/copilot", label: "AI Co-Pilot", icon: Sparkles },
+  { to: "/approvals", label: "Approvals", icon: ShieldCheck },
 ];
 
 export function AppShell({ children }: AppShellProps) {

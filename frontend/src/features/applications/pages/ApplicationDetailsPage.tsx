@@ -1,4 +1,12 @@
-import { ArrowLeft, Check, ExternalLink, FileText, Save, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  ExternalLink,
+  FileText,
+  Save,
+  ShieldCheck,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
@@ -10,6 +18,7 @@ import {
   applicationStatusTone,
   type ApplicationStatus,
 } from "../../../types/application";
+import { useCreateApprovalMutation } from "../../approvals/hooks/useApprovals";
 import { useDocumentsList } from "../../documents/hooks/useDocuments";
 import {
   useApplicationDetail,
@@ -32,6 +41,7 @@ export function ApplicationDetailsPage() {
   const updateMutation = useUpdateApplicationMutation(applicationId);
   const transitionMutation = useTransitionApplicationMutation();
   const deleteMutation = useDeleteApplicationMutation();
+  const requestApprovalMutation = useCreateApprovalMutation();
 
   const [companyName, setCompanyName] = useState("");
   const [roleTitle, setRoleTitle] = useState("");
@@ -106,6 +116,28 @@ export function ApplicationDetailsPage() {
       navigate("/applications", { replace: true });
     } catch {
       // Displayed via deleteMutation.error
+    }
+  };
+
+  const handleRequestApproval = async () => {
+    if (!app) return;
+    try {
+      await requestApprovalMutation.mutateAsync({
+        action_type: "submit_application",
+        application_id: app.id,
+        target_destination: app.job_url || `${app.company_name} Application Portal`,
+        title: `Submit Application: ${app.role_title} at ${app.company_name}`,
+        payload: {
+          company: app.company_name,
+          role: app.role_title,
+          tailored_resume_id: tailoredResumeId || app.tailored_resume_id,
+          cover_letter_id: coverLetterId || app.cover_letter_id,
+          notes: notes.trim() || app.notes || null,
+        },
+      });
+      navigate("/approvals");
+    } catch {
+      // Displayed via requestApprovalMutation.error
     }
   };
 
@@ -225,11 +257,32 @@ export function ApplicationDetailsPage() {
                         Move to {applicationStatusLabel(nextStatus)}
                       </button>
                     ))}
+                    {(app.status === "SAVED" || app.status === "PREPARING") && (
+                      <button
+                        type="button"
+                        disabled={requestApprovalMutation.isPending}
+                        onClick={() => void handleRequestApproval()}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+                      >
+                        <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                        {requestApprovalMutation.isPending
+                          ? "Preparing Approval..."
+                          : "Request Submission Approval"}
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <p className="text-xs text-slate-500">
                     This application is in a terminal state. No further transitions are available.
                   </p>
+                )}
+
+                {requestApprovalMutation.error && (
+                  <StateNotice
+                    title="Approval request failed"
+                    description={requestApprovalMutation.error.message}
+                    tone="error"
+                  />
                 )}
 
                 {transitionMutation.error && (

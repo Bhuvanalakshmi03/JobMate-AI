@@ -1,8 +1,10 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AppShell } from "../../components/layout/AppShell";
+import { AgentCopilotPage } from "../../features/agents/pages/AgentCopilotPage";
 import { ApplicationDetailsPage } from "../../features/applications/pages/ApplicationDetailsPage";
 import { ApplicationsPage } from "../../features/applications/pages/ApplicationsPage";
+import { ApprovalsPage } from "../../features/approvals/pages/ApprovalsPage";
 import { ProtectedRoute } from "../../features/authentication/components/ProtectedRoute";
 import { LoginPage } from "../../features/authentication/pages/LoginPage";
 import { FoundationStatusPage } from "../../features/dashboard/pages/FoundationStatusPage";
@@ -114,6 +116,26 @@ export function AppRouter() {
           <ProtectedRoute>
             <AppShell>
               <ApplicationDetailsPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/copilot"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <AgentCopilotPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/approvals"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <ApprovalsPage />
             </AppShell>
           </ProtectedRoute>
         }

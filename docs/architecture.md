@@ -11,12 +11,13 @@ CareerPilot AI uses a **Modular Monolithic Architecture** (`backend/app/`) paire
 - `app/database/`: Async SQLAlchemy 2.0 engine, `UTCDateTime`/`UUIDPrimaryKeyMixin` mixins, and Alembic migrations.
 - `app/observability/middleware.py`: `RequestContextMiddleware` propagating `X-Request-ID`, baseline security headers, and latency telemetry.
 
-### Domain Modules & Integrations (Phases 2–6)
+### Domain Modules & Integrations (Phases 2–7)
 - `app/integrations/oauth/google.py`: Google OAuth 2.0 / OIDC adapter (`GoogleOAuthClient`).
 - `app/integrations/storage/local.py`: Private non-overwriting file storage (`LocalPrivateStorage`).
 - `app/integrations/document_parser/extractor.py`: PDF/DOCX signature validation and text extraction via PyMuPDF and `python-docx`.
 - `app/integrations/openai/client.py`: Centralized OpenAI client (`OpenAIChatClient`) supporting chat JSON completions, live `web_search` tool calls, and dense embeddings (`embed_texts`).
 - `app/integrations/job_search/openai_web_search.py`: Live web-search job discovery adapter (`OpenAIWebSearchJobProvider`).
+- `app/integrations/chroma/store.py`: Dedicated vector-store interface (`VectorStoreProtocol`, `ChromaVectorStore` HTTP v2 client, `InMemoryVectorStore`).
 - `app/modules/authentication/`: `User`, `UserSession`, `OAuthState`, `AuthService`, and `/api/v1/auth/*`.
 - `app/modules/profile/`: `UserProfile`, `UserSkill`, `ProfileService`, and `/api/v1/profile/*`.
 - `app/modules/resume/`: `Resume`, `ResumeFact`, separated parser/extractor/validator/tasks/service, and `/api/v1/resumes/*`.
@@ -24,14 +25,20 @@ CareerPilot AI uses a **Modular Monolithic Architecture** (`backend/app/`) paire
 - `app/modules/matching/`: `JobMatch`, deterministic configurable weighted scorer (`scorer.py`) + semantic embedding similarity (`JobMatchingService`).
 - `app/modules/documents/`: `GeneratedDocument`, verified-fact-only generator (`generator.py`), anti-hallucination validator (`validator.py`), ATS PDF/DOCX/MD exporter (`exporter.py`), versioned `DocumentService`, and `/api/v1/documents/*`.
 - `app/modules/applications/`: `Application`, `ApplicationHistory`, controlled status transition state machine (`state_machine.py`), `ApplicationRepository`, `ApplicationService`, and `/api/v1/applications/*`.
+- `app/modules/rag/`: Text normalization/chunking (`chunker.py`), content hashing, prompt-injection sanitization, and user-isolated `RAGService`.
+- `app/agents/`: LangGraph `StateGraph` orchestrator (`graph.py`), typed `CareerPilotAgentState` (`state.py`), step/token/retry/trace policies (`policies.py`), independent prompts (`prompts/`), least-privilege user toolset (`tools/registry.py`), and 9 specialist nodes (`nodes/`).
+- `app/modules/agents/`: `WorkflowRun`, `AgentOrchestrationService` (workflow checkpoint pause/resume), and `/api/v1/agents/*`.
+- `app/modules/approvals/`: `ApprovalRequest`, `ApprovalService` enforcing human confirmation before external side effects, and `/api/v1/approvals/*`.
 - `app/repositories/audit_repository.py`: Shared immutable audit logging repository.
 
 ## Frontend Layer Boundaries
-- `src/services/`: Centralized `api-client.ts`, `health-service.ts`, `auth-service.ts`, `profile-service.ts`, `resume-service.ts`, `job-service.ts`, `document-service.ts`, `application-service.ts`.
+- `src/services/`: Centralized `api-client.ts`, `health-service.ts`, `auth-service.ts`, `profile-service.ts`, `resume-service.ts`, `job-service.ts`, `document-service.ts`, `application-service.ts`, `agent-service.ts`, `approval-service.ts`.
 - `src/features/authentication/`: `AuthProvider`/`useAuth`, `ProtectedRoute`, `LoginPage`.
 - `src/features/profile/`: `ProfilePage`, `SkillsManager`, profile/skills hooks.
 - `src/features/resume/`: `ResumesPage`, `ResumeAnalysisPage`, `ResumeFactCard`, resume hooks.
 - `src/features/jobs/`: `JobsPage`, `JobDetailsPage`, `JobCard`, `JobFilters`, `MatchScore`, job/match hooks.
 - `src/features/documents/`: `DocumentsPage`, `DocumentEditorPage`, document generation/version hooks.
 - `src/features/applications/`: `ApplicationsPage`, `ApplicationDetailsPage`, application hooks and date utilities.
+- `src/features/agents/`: `AgentCopilotPage`, LangGraph workflow & RAG hooks.
+- `src/features/approvals/`: `ApprovalsPage`, human approval decision hooks.
 - `src/features/dashboard/`: `FoundationStatusPage`.
