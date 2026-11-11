@@ -58,12 +58,22 @@ class Settings(BaseSettings):
     # Redis / Worker
     redis_url: str = Field(default="redis://localhost:6379/0", min_length=1)
 
+    # LLM Provider Switch ("openai" | "claude")
+    llm_mode: Literal["openai", "claude"] = "openai"
+
     # OpenAI (LLM intelligence, embeddings, and web-search job discovery)
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
     openai_embedding_model: str = "text-embedding-3-small"
     openai_timeout_seconds: int = Field(default=90, ge=1, le=300)
     openai_max_tokens: int = Field(default=4096, ge=128, le=32768)
+
+    # Anthropic Claude (alternative LLM intelligence, tool calling, JSON, and web search)
+    anthropic_api_key: str = ""
+    claude_model: str = "claude-sonnet-5-5"
+    claude_timeout_seconds: int = Field(default=90, ge=1, le=300)
+    claude_max_tokens: int = Field(default=4096, ge=128, le=32768)
+    enable_hybrid_openai_embeddings: bool = False
 
     # Google OAuth 2.0 / OIDC
     google_client_id: str = ""
@@ -101,6 +111,14 @@ class Settings(BaseSettings):
     # Monitoring & Timeouts
     log_level: LogLevel = "INFO"
     request_timeout_seconds: int = Field(default=30, ge=1, le=300)
+
+    @field_validator("llm_mode", mode="before")
+    @classmethod
+    def normalize_llm_mode(cls, value: object) -> str:
+        """Normalize LLM_MODE before Literal validation."""
+        if isinstance(value, str):
+            return value.strip().lower()
+        raise ValueError("LLM_MODE must be 'openai' or 'claude'")
 
     @field_validator("session_cookie_domain", mode="before")
     @classmethod
@@ -235,6 +253,40 @@ class Settings(BaseSettings):
     def google_oauth_configured(self) -> bool:
         """Whether Google OAuth client credentials are configured."""
         return bool(self.google_client_id.strip() and self.google_client_secret.strip())
+
+    @property
+    def is_claude_mode(self) -> bool:
+        """Whether LLM_MODE selects Anthropic Claude as the primary LLM provider."""
+        return self.llm_mode == "claude"
+
+    @property
+    def active_llm_api_key(self) -> str:
+        """Return API key for the active LLM_MODE provider."""
+        if self.is_claude_mode:
+            return self.anthropic_api_key.strip()
+        return self.openai_api_key.strip()
+
+    @property
+    def active_llm_model(self) -> str:
+        """Return primary chat/tool model configured for active LLM_MODE."""
+        return self.claude_model if self.is_claude_mode else self.openai_model
+
+    @property
+    def active_llm_max_tokens(self) -> int:
+        """Return configured max tokens budget for active LLM_MODE."""
+        return self.claude_max_tokens if self.is_claude_mode else self.openai_max_tokens
+
+    @property
+    def ai_llm_configured(self) -> bool:
+        """Whether the selected primary LLM provider has an API key configured."""
+        return bool(self.active_llm_api_key)
+
+    @property
+    def embeddings_configured(self) -> bool:
+        """Whether dense vector embeddings (OpenAI) are enabled and configured."""
+        return bool(self.openai_api_key.strip()) and (
+            not self.is_claude_mode or self.enable_hybrid_openai_embeddings
+        )
 
 
 @lru_cache(maxsize=1)

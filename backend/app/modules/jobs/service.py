@@ -194,13 +194,16 @@ class JobDiscoveryService:
             )
             cache_key = self._cache_key(search_query)
 
+            provider_name = str(
+                getattr(self._provider, "source_provider", "openai_web_search")
+            )
             if not refresh:
                 cached_ids = await self._get_cached_job_ids(cache_key)
                 if cached_ids:
                     jobs = await self._jobs.get_by_ids(cached_ids[offset : offset + limit])
                     total = len(cached_ids)
                     cached = True
-                    source = "openai_web_search"
+                    source = provider_name
 
             if not jobs and not refresh:
                 local_rows, local_total = await self._jobs.search_local(
@@ -223,7 +226,7 @@ class JobDiscoveryService:
                 await self._set_cached_job_ids(cache_key, [j.id for j in persisted])
                 jobs = persisted[offset : offset + limit]
                 total = len(persisted)
-                source = "openai_web_search"
+                source = provider_name
                 cached = False
                 await self._audit.record(
                     event_type="jobs.discovered",
@@ -232,7 +235,7 @@ class JobDiscoveryService:
                     details={
                         "query": search_query.query,
                         "result_count": len(persisted),
-                        "provider": "openai_web_search",
+                        "provider": provider_name,
                     },
                 )
 

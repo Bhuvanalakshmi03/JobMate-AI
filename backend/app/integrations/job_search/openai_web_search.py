@@ -145,10 +145,16 @@ def _extract_valid_url_and_domain(raw_url: str) -> tuple[str, str] | None:
 
 
 class OpenAIWebSearchJobProvider:
-    """Discovers live job listings via OpenAI Responses API web_search tool."""
+    """Discovers live job listings via configured LLM web_search tool."""
 
-    def __init__(self, llm_client: WebSearchLLMProtocol) -> None:
+    def __init__(
+        self,
+        llm_client: WebSearchLLMProtocol,
+        *,
+        source_provider: str = "openai_web_search",
+    ) -> None:
         self._llm = llm_client
+        self.source_provider = source_provider
 
     async def search_jobs(self, query: JobSearchQuery) -> list[DiscoveredJobRecord]:
         filters = [f"Role/Keywords: {query.query}"]
@@ -202,7 +208,7 @@ class OpenAIWebSearchJobProvider:
 
             results.append(
                 DiscoveredJobRecord(
-                    source_provider="openai_web_search",
+                    source_provider=self.source_provider,
                     title=item.title.strip()[:255],
                     company=item.company.strip()[:255],
                     location=item.location.strip()[:255] if item.location else None,

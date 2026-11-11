@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.core.exceptions import NotFoundError, ValidationError
-from app.integrations.openai.client import OpenAIChatClient
+from app.integrations.llm.factory import create_llm_client
 from app.modules.applications.repository import ApplicationRepository
 from app.modules.authentication.models import User
 from app.modules.interviews.engine import InterviewAIProtocol, OpenAIInterviewEngine
@@ -47,7 +47,7 @@ class InterviewService:
         self._session = session
         self._settings = settings
         self._engine: InterviewAIProtocol = engine or OpenAIInterviewEngine(
-            OpenAIChatClient(settings)
+            create_llm_client(settings)
         )
         self._repo = InterviewRepository(session)
         self._jobs = JobRepository(session)

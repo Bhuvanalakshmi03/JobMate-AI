@@ -8,7 +8,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Response, status
 
 from app.core.dependencies import DBSessionDep, SettingsDep
-from app.integrations.openai.client import LLMClientProtocol, OpenAIChatClient
+from app.integrations.llm.factory import create_llm_client
+from app.integrations.openai.client import LLMClientProtocol
 from app.modules.authentication.dependencies import CurrentUserDep
 from app.modules.documents.generator import DocumentGeneratorProtocol, OpenAIDocumentGenerator
 from app.modules.documents.schemas import (
@@ -28,7 +29,7 @@ router = APIRouter(prefix="/documents", tags=["Documents"])
 
 
 def get_llm_client_for_documents(settings: SettingsDep) -> LLMClientProtocol:
-    return OpenAIChatClient(settings)
+    return create_llm_client(settings)
 
 
 def get_document_generator(

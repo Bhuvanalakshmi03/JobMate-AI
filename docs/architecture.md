@@ -15,7 +15,9 @@ JobMate AI uses a **Modular Monolithic Architecture** (`backend/app/`) paired wi
 - `app/integrations/oauth/google.py`: Google OAuth 2.0 / OIDC adapter (`GoogleOAuthClient`).
 - `app/integrations/storage/local.py`: Private non-overwriting file storage (`LocalPrivateStorage`).
 - `app/integrations/document_parser/extractor.py`: PDF/DOCX signature validation and text extraction via PyMuPDF and `python-docx`.
-- `app/integrations/openai/client.py`: Centralized OpenAI client (`OpenAIChatClient`) supporting chat JSON completions, live `web_search` tool calls, and dense embeddings (`embed_texts`).
+- `app/integrations/llm/`: Provider factory (`create_llm_client`, `create_embedding_client`, `create_job_search_provider`) routing by `LLM_MODE` (`claude` | `openai`), plus shared retry/redaction helpers (`shared.py`).
+- `app/integrations/openai/client.py`: Centralized OpenAI client (`OpenAIChatClient`) supporting chat JSON completions, live `web_search` tool calls, tool calling, and dense embeddings (`embed_texts`).
+- `app/integrations/claude/client.py`: Centralized Anthropic Claude client (`ClaudeChatClient`) supporting `complete_json`, native `web_search_20250305` discovery, and multi-turn `tool_use` function calling.
 - `app/integrations/job_search/openai_web_search.py`: Live web-search job discovery adapter (`OpenAIWebSearchJobProvider`).
 - `app/integrations/chroma/store.py`: Dedicated vector-store interface (`VectorStoreProtocol`, `ChromaVectorStore` HTTP v2 client, `InMemoryVectorStore`).
 - `app/integrations/calendar/google_calendar.py`: Google Calendar API v3 client (`GoogleCalendarClient`, `CalendarProviderProtocol`) for upcoming event reads and human-approved event creation.

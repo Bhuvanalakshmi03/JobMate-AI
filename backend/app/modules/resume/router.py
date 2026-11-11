@@ -9,7 +9,8 @@ from fastapi import APIRouter, Depends, File, Query, UploadFile, status
 
 from app.api.v1.schemas.common import TaskStatusResponse
 from app.core.dependencies import DBSessionDep, SettingsDep
-from app.integrations.openai.client import LLMClientProtocol, OpenAIChatClient
+from app.integrations.llm.factory import create_llm_client
+from app.integrations.openai.client import LLMClientProtocol
 from app.integrations.storage.local import LocalPrivateStorage, StorageBackendProtocol
 from app.modules.authentication.dependencies import CurrentUserDep
 from app.modules.resume.extractor import ResumeAnalystExtractor, ResumeExtractorProtocol
@@ -35,8 +36,8 @@ def get_storage_backend(settings: SettingsDep) -> StorageBackendProtocol:
 
 
 def get_llm_client(settings: SettingsDep) -> LLMClientProtocol:
-    """Provide centralized OpenAI chat client."""
-    return OpenAIChatClient(settings)
+    """Provide active LLM chat client (OpenAI or Claude based on LLM_MODE)."""
+    return create_llm_client(settings)
 
 
 def get_resume_extractor(

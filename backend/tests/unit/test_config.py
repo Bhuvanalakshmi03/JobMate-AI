@@ -95,3 +95,29 @@ def test_settings_normalizes_cookie_domain_and_samesite() -> None:
     scoped_domain = Settings(session_cookie_domain=".techcreed.in")
     assert scoped_domain.session_cookie_domain == ".techcreed.in"
 
+
+def test_settings_llm_mode_switching_and_provider_properties() -> None:
+    claude = Settings(
+        llm_mode=" Claude ",
+        anthropic_api_key="sk-ant-usr-sample",
+        openai_api_key="sk-proj-sample",
+        claude_model="claude-sonnet-5-5",
+    )
+    assert claude.llm_mode == "claude"
+    assert claude.is_claude_mode is True
+    assert claude.active_llm_api_key == "sk-ant-usr-sample"
+    assert claude.active_llm_model == "claude-sonnet-5-5"
+    assert claude.ai_llm_configured is True
+    assert claude.embeddings_configured is False
+
+    hybrid = Settings(
+        llm_mode="claude",
+        anthropic_api_key="sk-ant-usr-sample",
+        openai_api_key="sk-proj-sample",
+        enable_hybrid_openai_embeddings=True,
+    )
+    assert hybrid.embeddings_configured is True
+
+    with pytest.raises(PydanticValidationError):
+        Settings(llm_mode="invalid_provider")  # type: ignore[arg-type]
+

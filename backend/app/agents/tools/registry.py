@@ -49,7 +49,7 @@ class AgentToolset:
         settings: Settings,
         user: User,
         llm_client: LLMClientProtocol,
-        embedding_client: EmbeddingClientProtocol,
+        embedding_client: EmbeddingClientProtocol | None,
         vector_store: VectorStoreProtocol,
         job_search_provider: JobSearchProviderProtocol,
         document_generator: DocumentGeneratorProtocol,
@@ -96,7 +96,7 @@ class AgentToolset:
 
     @property
     def max_tokens_budget(self) -> int:
-        return max(self._settings.openai_max_tokens * 6, 12000)
+        return max(self._settings.active_llm_max_tokens * 6, 12000)
 
     async def load_verified_profile(self) -> dict[str, Any]:
         """Load non-sensitive user-verified profile and skill identifiers."""
@@ -135,7 +135,7 @@ class AgentToolset:
         ):
             return "application_prep", "Matched application preparation intent.", 0
 
-        if not self._settings.openai_api_key.strip():
+        if not self._settings.ai_llm_configured:
             return "career_advisory", "Defaulted to career advisory (offline classifier).", 0
 
         safe_task = sanitize_untrusted_context(requested_task, max_chars=800)
@@ -183,7 +183,7 @@ class AgentToolset:
             user=self._user,
             q=query,
             location=location,
-            refresh=bool(self._settings.openai_api_key.strip()),
+            refresh=self._settings.ai_llm_configured,
             limit=limit,
         )
         return {
@@ -208,7 +208,7 @@ class AgentToolset:
         match = await self._job_matching.calculate_match_for_job(
             user=self._user,
             job_id=parsed_id,
-            use_semantic=bool(self._settings.openai_api_key.strip()),
+            use_semantic=self._settings.embeddings_configured,
         )
         return {
             "job_id": str(match.job_id),

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 from dataclasses import dataclass
 
@@ -9,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
-from app.core.exceptions import ExternalServiceError
+from app.core.exceptions import ConfigurationError, ExternalServiceError, RateLimitError
 from app.core.logging import get_logger
 from app.integrations.chroma.store import RetrievedChunk, VectorChunk, VectorStoreProtocol
 from app.integrations.openai.client import EmbeddingClientProtocol
@@ -41,7 +42,7 @@ class RAGService:
         session: AsyncSession,
         settings: Settings,
         vector_store: VectorStoreProtocol,
-        embedding_client: EmbeddingClientProtocol,
+        embedding_client: EmbeddingClientProtocol | None,
     ) -> None:
         self._session = session
         self._settings = settings
@@ -50,8 +51,9 @@ class RAGService:
         self._profiles = ProfileRepository(session)
         self._skills = SkillRepository(session)
 
-    async def index_user_career_context(self, *, user_id: uuid.UUID) -> RAGSyncResult:
-        """Index verified resume facts, career profile, and saved documents for one user."""
+    async def _collect_candidate_chunks(
+        self, *, user_id: uuid.UUID
+    ) -> tuple[list[tuple[str, str, dict[str, str]]], int, dict[str, int]]:
         profile = await self._profiles.get_by_user_id(user_id)
         skills = await self._skills.list_by_user_id(user_id)
         facts = list(
@@ -117,6 +119,11 @@ class RAGService:
         candidate_chunks: list[tuple[str, str, dict[str, str]]] = []
         seen_hashes: set[str] = set()
         skipped_duplicates = 0
+        embedding_label = (
+            self._settings.openai_embedding_model
+            if self._embeddings is not None
+            else "lexical_fallback"
+        )
 
         for source_type, source_id, label, body in raw_records:
             for idx, piece in enumerate(chunk_text(body)):
@@ -132,11 +139,18 @@ class RAGService:
                     "source_id": source_id,
                     "label": label[:200],
                     "content_hash": c_hash,
-                    "embedding_model": self._settings.openai_embedding_model,
+                    "embedding_model": embedding_label,
                 }
                 candidate_chunks.append((chunk_id, piece, metadata))
 
-        if not candidate_chunks:
+        return candidate_chunks, skipped_duplicates, source_counts
+
+    async def index_user_career_context(self, *, user_id: uuid.UUID) -> RAGSyncResult:
+        """Index verified resume facts, career profile, and saved documents for one user."""
+        candidate_chunks, skipped_duplicates, source_counts = (
+            await self._collect_candidate_chunks(user_id=user_id)
+        )
+        if not candidate_chunks or self._embeddings is None:
             return RAGSyncResult(
                 indexed_chunks=0,
                 skipped_duplicates=skipped_duplicates,
@@ -144,7 +158,18 @@ class RAGService:
             )
 
         texts = [item[1] for item in candidate_chunks]
-        embeddings = await self._embeddings.embed_texts(texts)
+        try:
+            embeddings = await self._embeddings.embed_texts(texts)
+        except (ExternalServiceError, ConfigurationError, RateLimitError) as exc:
+            logger.warning(
+                "RAG embedding generation unavailable; skipping vector upsert",
+                extra={"user_id": str(user_id), "exception_class": exc.__class__.__name__},
+            )
+            return RAGSyncResult(
+                indexed_chunks=0,
+                skipped_duplicates=skipped_duplicates,
+                source_counts=source_counts,
+            )
 
         vector_chunks = [
             VectorChunk(
@@ -168,6 +193,39 @@ class RAGService:
             source_counts=source_counts,
         )
 
+    async def _lexical_retrieve(
+        self,
+        *,
+        user_id: uuid.UUID,
+        query: str,
+        top_k: int,
+        source_types: list[str] | None,
+    ) -> list[RetrievedChunk]:
+        candidate_chunks, _, _ = await self._collect_candidate_chunks(user_id=user_id)
+        if source_types:
+            allowed = set(source_types)
+            candidate_chunks = [
+                item for item in candidate_chunks if item[2].get("source_type") in allowed
+            ]
+        query_terms = {tok for tok in re.findall(r"[a-z0-9]{2,}", query.lower())}
+        scored: list[tuple[float, str, str, dict[str, str]]] = []
+        for chunk_id, piece, metadata in candidate_chunks:
+            piece_terms = set(re.findall(r"[a-z0-9]{2,}", piece.lower()))
+            overlap = len(query_terms & piece_terms)
+            base_score = overlap / max(1, len(query_terms)) if query_terms else 0.1
+            scored.append((round(min(1.0, base_score), 4), chunk_id, piece, metadata))
+
+        scored.sort(key=lambda entry: entry[0], reverse=True)
+        return [
+            RetrievedChunk(
+                chunk_id=chunk_id,
+                text=sanitize_untrusted_context(piece),
+                score=score,
+                metadata=metadata,
+            )
+            for score, chunk_id, piece, metadata in scored[:top_k]
+        ]
+
     async def retrieve_context(
         self,
         *,
@@ -176,10 +234,15 @@ class RAGService:
         top_k: int = 5,
         source_types: list[str] | None = None,
     ) -> list[RetrievedChunk]:
-        """Retrieve user-owned semantic context snippets with prompt-injection sanitization."""
+        """Retrieve user-owned career snippets via dense vectors or lexical DB fallback."""
         cleaned_query = query.strip()
         if not cleaned_query:
             return []
+
+        if self._embeddings is None:
+            return await self._lexical_retrieve(
+                user_id=user_id, query=cleaned_query, top_k=top_k, source_types=source_types
+            )
 
         try:
             query_embedding = (await self._embeddings.embed_texts([cleaned_query]))[0]
@@ -190,12 +253,14 @@ class RAGService:
                 top_k=top_k,
                 source_types=source_types,
             )
-        except ExternalServiceError as exc:
+        except (ExternalServiceError, ConfigurationError, RateLimitError) as exc:
             logger.warning(
-                "RAG vector retrieval unavailable; returning empty context",
+                "RAG vector retrieval unavailable; using lexical career fallback",
                 extra={"user_id": str(user_id), "error": str(exc)},
             )
-            return []
+            return await self._lexical_retrieve(
+                user_id=user_id, query=cleaned_query, top_k=top_k, source_types=source_types
+            )
 
         validated: list[RetrievedChunk] = []
         for hit in raw_hits:

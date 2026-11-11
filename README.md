@@ -14,7 +14,7 @@ Built with a **FastAPI Modular Monolith** + **LangGraph Multi-Agent Orchestrator
 | **Database** | PostgreSQL + Alembic | ACID source of truth (`UTC` timestamps, UUID PKs, migrations `0001`–`0010`) |
 | **Cache & Queue** | Redis + Celery (`jobmate`) | Job search TTL caching, background tasks (`jobmate.reminders.dispatch_due`) |
 | **Vector Store (RAG)** | ChromaDB HTTP v2 (with `InMemoryVectorStore` test/fallback) | User-isolated semantic retrieval across profile, facts & docs |
-| **AI & Agents** | OpenAI (`gpt-4o-mini`, `text-embedding-3-small`, `web_search`) + LangGraph | Live web job discovery, multi-turn tool calling, checkpointed workflows |
+| **AI & Agents** | `LLM_MODE` switch (`claude` via Anthropic `claude-sonnet-5-5` or `openai` via `gpt-4o-mini` / `text-embedding-3-small`) + `web_search` + LangGraph | Live web job discovery, multi-turn tool calling, checkpointed workflows |
 | **Auth & Calendar** | Google OAuth 2.0 / OIDC, PKCE, HS256 JWT Cookie, Google Calendar API v3 | Revocable sessions (`user_sessions`) + Fernet-encrypted Calendar tokens |
 | **Frontend** | React 19, TypeScript, Vite, TanStack Query v5, Tailwind CSS v4 | Feature-modular SPA under `frontend/src/features/` |
 
@@ -105,7 +105,7 @@ docs/                # Architecture, DB schema, API reference, security controls
 ### 1. Environment Configuration
 ```bash
 cp .env.example .env
-# Set DATABASE_URL, REDIS_URL, CHROMA_URL, OPENAI_API_KEY, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, APP_SECRET_KEY
+# Set DATABASE_URL, REDIS_URL, CHROMA_URL, LLM_MODE (claude|openai), ANTHROPIC_API_KEY / OPENAI_API_KEY, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, APP_SECRET_KEY
 ```
 
 ### 2. Backend Setup, Migrations & Seed

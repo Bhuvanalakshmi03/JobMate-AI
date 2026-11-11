@@ -4,10 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import json
-import re
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, field
-from typing import Any, Protocol, cast
+from typing import Any, cast
 
 import httpx
 from openai import APIConnectionError, APIStatusError, APITimeoutError, AsyncOpenAI, RateLimitError
@@ -17,130 +15,33 @@ from app.core.exceptions import (
     ConfigurationError,
     ExternalServiceError,
 )
-from app.core.exceptions import (
-    RateLimitError as AppRateLimitError,
-)
 from app.core.logging import get_logger
+from app.integrations.llm.shared import (
+    EmbeddingClientProtocol as EmbeddingClientProtocol,
+)
+from app.integrations.llm.shared import (
+    LLMClientProtocol as LLMClientProtocol,
+)
+from app.integrations.llm.shared import (
+    LLMCompletionResult as LLMCompletionResult,
+)
+from app.integrations.llm.shared import (
+    ToolCallingClientProtocol as ToolCallingClientProtocol,
+)
+from app.integrations.llm.shared import (
+    ToolCallingResult as ToolCallingResult,
+)
+from app.integrations.llm.shared import (
+    WebSearchLLMProtocol as WebSearchLLMProtocol,
+)
+from app.integrations.llm.shared import (
+    execute_ai_with_retry,
+)
+from app.integrations.llm.shared import (
+    extract_json_object_text as extract_json_object_text,
+)
 
 logger = get_logger(__name__)
-
-_SECRET_PATTERN = re.compile(r"sk-[A-Za-z0-9_-]{8,}")
-_CODE_FENCE_RE = re.compile(r"```(?:json)?\s*([\s\S]*?)\s*```", re.IGNORECASE)
-
-
-def extract_json_object_text(raw_text: str) -> str:
-    """Extract a clean JSON object string from raw text, markdown fences, or prose."""
-    cleaned = (raw_text or "").strip()
-    if not cleaned:
-        return ""
-
-    fence_match = _CODE_FENCE_RE.search(cleaned)
-    if fence_match:
-        cleaned = fence_match.group(1).strip()
-
-    if cleaned.startswith("{"):
-        try:
-            _, end_idx = json.JSONDecoder().raw_decode(cleaned)
-            return cleaned[:end_idx]
-        except json.JSONDecodeError:
-            pass
-
-    first_brace = cleaned.find("{")
-    if first_brace != -1:
-        candidate = cleaned[first_brace:]
-        try:
-            _, end_idx = json.JSONDecoder().raw_decode(candidate)
-            return candidate[:end_idx]
-        except json.JSONDecodeError:
-            return candidate
-
-    return cleaned
-
-
-def _extract_safe_status_detail(exc: APIStatusError) -> str:
-    body = getattr(exc, "body", None)
-    detail = ""
-    if isinstance(body, dict):
-        err = body.get("error")
-        if isinstance(err, dict):
-            detail = str(err.get("message") or "").strip()
-        elif isinstance(err, str):
-            detail = err.strip()
-    if not detail:
-        detail = str(getattr(exc, "message", "") or "").strip()
-    if not detail:
-        return ""
-    scrubbed = _SECRET_PATTERN.sub("[REDACTED]", detail)
-    return scrubbed[:220]
-
-
-@dataclass(frozen=True, slots=True)
-class LLMCompletionResult:
-    """Structured LLM completion output with token telemetry."""
-
-    content: str
-    model: str
-    prompt_tokens: int
-    completion_tokens: int
-    total_tokens: int
-    citations: tuple[str, ...] = field(default_factory=tuple)
-
-
-class LLMClientProtocol(Protocol):
-    """Protocol enabling deterministic mocked LLM responses in tests."""
-
-    async def complete_json(
-        self,
-        *,
-        system_prompt: str,
-        user_prompt: str,
-        max_tokens: int | None = None,
-        temperature: float = 0.1,
-    ) -> LLMCompletionResult: ...
-
-
-class WebSearchLLMProtocol(Protocol):
-    """Protocol for OpenAI Responses API web-search calls."""
-
-    async def web_search_json(
-        self,
-        *,
-        system_prompt: str,
-        user_prompt: str,
-        max_output_tokens: int | None = None,
-    ) -> LLMCompletionResult: ...
-
-
-class EmbeddingClientProtocol(Protocol):
-    """Protocol enabling deterministic mocked text embeddings in tests."""
-
-    async def embed_texts(self, texts: list[str]) -> list[list[float]]: ...
-
-
-@dataclass(frozen=True, slots=True)
-class ToolCallingResult:
-    """Multi-round OpenAI function/tool calling response and telemetry."""
-
-    content: str
-    model: str
-    prompt_tokens: int
-    completion_tokens: int
-    total_tokens: int
-    executed_tools: tuple[dict[str, Any], ...] = field(default_factory=tuple)
-
-
-class ToolCallingClientProtocol(Protocol):
-    """Protocol enabling deterministic mocked tool-calling chat in tests."""
-
-    async def complete_with_tools(
-        self,
-        *,
-        messages: list[dict[str, Any]],
-        tools: list[dict[str, Any]],
-        tool_executor: Callable[[str, dict[str, Any]], Awaitable[str]],
-        max_rounds: int = 6,
-        max_tokens: int | None = None,
-    ) -> ToolCallingResult: ...
 
 
 def _extract_citation_urls(response: Any) -> tuple[str, ...]:
@@ -187,48 +88,16 @@ class OpenAIChatClient:
             )
         return self._client
 
-    async def _execute_with_retry(self, operation: Any) -> Any:
-        last_exc: Exception | None = None
-        for attempt in range(self._max_retries + 1):
-            try:
-                return await operation()
-            except RateLimitError as exc:
-                last_exc = exc
-                status_code = getattr(exc, "status_code", 429)
-                err_lower = str(exc).lower()
-                if "insufficient_quota" in err_lower or "credit_balance_exhausted" in err_lower:
-                    raise AppRateLimitError(
-                        "OpenAI API credit balance exhausted or quota exceeded. Check OpenAI "
-                        "billing limits."
-                    ) from exc
-                if attempt < self._max_retries:
-                    await asyncio.sleep(0.5 * (2**attempt))
-                    continue
-                raise AppRateLimitError(
-                    f"AI provider rate limit exceeded (status {status_code})."
-                ) from exc
-            except (APITimeoutError, APIConnectionError) as exc:
-                last_exc = exc
-                if attempt < self._max_retries:
-                    await asyncio.sleep(0.5 * (2**attempt))
-                    continue
-                raise ExternalServiceError("AI provider request timed out or failed.") from exc
-            except APIStatusError as exc:
-                if exc.status_code >= 500 and attempt < self._max_retries:
-                    last_exc = exc
-                    await asyncio.sleep(0.5 * (2**attempt))
-                    continue
-                detail = _extract_safe_status_detail(exc)
-                logger.warning(
-                    "AI provider status error",
-                    extra={"status_code": exc.status_code, "detail": detail},
-                )
-                suffix = f": {detail}" if detail else "."
-                raise ExternalServiceError(
-                    f"AI provider returned error status {exc.status_code}{suffix}"
-                ) from exc
-
-        raise ExternalServiceError("AI provider request failed after retries.") from last_exc
+    async def _execute_with_retry(self, operation: Callable[[], Awaitable[Any]]) -> Any:
+        return await execute_ai_with_retry(
+            operation,
+            max_retries=self._max_retries,
+            sleep_fn=asyncio.sleep,
+            rate_limit_exc=RateLimitError,
+            transient_excs=(APITimeoutError, APIConnectionError),
+            status_exc=APIStatusError,
+            provider_label="OpenAI",
+        )
 
     async def complete_json(
         self,

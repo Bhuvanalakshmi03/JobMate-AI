@@ -9,7 +9,7 @@ from typing import Any
 from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.database.connection import create_db_engine, create_session_factory
-from app.integrations.openai.client import OpenAIChatClient
+from app.integrations.llm.factory import create_llm_client
 from app.integrations.storage.local import LocalPrivateStorage
 from app.modules.authentication.repository import UserRepository
 from app.modules.resume.extractor import ResumeAnalystExtractor
@@ -41,7 +41,7 @@ async def _run_resume_analysis_async(
                 settings=settings,
                 storage=LocalPrivateStorage(settings.local_storage_path),
                 parser=ResumeParser(settings),
-                extractor=ResumeAnalystExtractor(OpenAIChatClient(settings)),
+                extractor=ResumeAnalystExtractor(create_llm_client(settings)),
                 validator=ResumeExtractionValidator(),
             )
             result = await service.analyze_resume(

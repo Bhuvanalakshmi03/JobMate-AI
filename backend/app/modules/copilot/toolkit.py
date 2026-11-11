@@ -296,7 +296,7 @@ class CopilotChatToolkit:
         session: AsyncSession,
         settings: Settings,
         user: User,
-        embedding_client: EmbeddingClientProtocol,
+        embedding_client: EmbeddingClientProtocol | None,
         vector_store: VectorStoreProtocol,
         job_search_provider: JobSearchProviderProtocol,
         document_generator: DocumentGeneratorProtocol,
@@ -448,7 +448,7 @@ class CopilotChatToolkit:
             location=args.get("location"),
             work_mode=args.get("work_mode"),
             experience_level=args.get("experience_level"),
-            refresh=bool(args.get("refresh", bool(self._settings.openai_api_key.strip()))),
+            refresh=bool(args.get("refresh", self._settings.ai_llm_configured)),
             limit=int(args.get("limit") or 5),
         )
         return {
@@ -475,7 +475,7 @@ class CopilotChatToolkit:
         match = await self._job_matching.calculate_match_for_job(
             user=self._user,
             job_id=job_id,
-            use_semantic=bool(self._settings.openai_api_key.strip()),
+            use_semantic=self._settings.embeddings_configured,
         )
         return match.model_dump(mode="json")
 

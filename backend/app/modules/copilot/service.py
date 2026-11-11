@@ -12,13 +12,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings
 from app.core.exceptions import NotFoundError
 from app.integrations.chroma.store import VectorStoreProtocol, create_vector_store
-from app.integrations.job_search.openai_web_search import (
-    JobSearchProviderProtocol,
-    OpenAIWebSearchJobProvider,
+from app.integrations.job_search.openai_web_search import JobSearchProviderProtocol
+from app.integrations.llm.factory import (
+    create_embedding_client,
+    create_job_search_provider,
+    create_llm_client,
 )
 from app.integrations.openai.client import (
     EmbeddingClientProtocol,
-    OpenAIChatClient,
     ToolCallingClientProtocol,
 )
 from app.modules.approvals.models import ApprovalRequest
@@ -80,12 +81,17 @@ class CopilotChatService:
     ) -> None:
         self._session = session
         self._settings = settings
-        default_ai = OpenAIChatClient(settings)
+        default_ai = create_llm_client(settings)
         self._tool_client: ToolCallingClientProtocol = tool_client or default_ai
-        self._embeddings: EmbeddingClientProtocol = embedding_client or default_ai
+        self._embeddings: EmbeddingClientProtocol | None = (
+            embedding_client
+            if embedding_client is not None
+            else create_embedding_client(settings)
+        )
         self._vectors: VectorStoreProtocol = vector_store or create_vector_store(settings)
         self._job_provider: JobSearchProviderProtocol = (
-            job_search_provider or OpenAIWebSearchJobProvider(default_ai)
+            job_search_provider
+            or create_job_search_provider(settings, llm_client=default_ai)
         )
         self._doc_generator: DocumentGeneratorProtocol = (
             document_generator or OpenAIDocumentGenerator(default_ai)

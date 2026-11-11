@@ -8,11 +8,9 @@ from typing import Annotated
 from fastapi import APIRouter, Body, Depends, Query, status
 
 from app.core.dependencies import DBSessionDep, SettingsDep
-from app.integrations.job_search.openai_web_search import (
-    JobSearchProviderProtocol,
-    OpenAIWebSearchJobProvider,
-)
-from app.integrations.openai.client import EmbeddingClientProtocol, OpenAIChatClient
+from app.integrations.job_search.openai_web_search import JobSearchProviderProtocol
+from app.integrations.llm.factory import create_embedding_client, create_job_search_provider
+from app.integrations.openai.client import EmbeddingClientProtocol
 from app.modules.authentication.dependencies import CurrentUserDep
 from app.modules.jobs.schemas import (
     JobDetailResponse,
@@ -28,15 +26,13 @@ router = APIRouter(prefix="/jobs", tags=["Jobs & Matching"])
 
 
 def get_job_search_provider(settings: SettingsDep) -> JobSearchProviderProtocol:
-    """Provide live OpenAI Web Search job discovery adapter."""
-    return OpenAIWebSearchJobProvider(OpenAIChatClient(settings))
+    """Provide live Web Search job discovery adapter for the configured LLM_MODE."""
+    return create_job_search_provider(settings)
 
 
 def get_embedding_client(settings: SettingsDep) -> EmbeddingClientProtocol | None:
-    """Provide OpenAI embedding client when API key is configured."""
-    if not settings.openai_api_key.strip():
-        return None
-    return OpenAIChatClient(settings)
+    """Provide dense embedding client when OpenAI embeddings are configured."""
+    return create_embedding_client(settings)
 
 
 def get_job_discovery_service(
