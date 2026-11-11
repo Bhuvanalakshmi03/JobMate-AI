@@ -32,6 +32,7 @@ from app.modules.documents.schemas import (
 )
 from app.modules.documents.service import DocumentService
 from app.modules.documents.validator import DocumentFactualityValidator
+from app.modules.interviews.service import InterviewService
 from app.modules.jobs.repository import JobRepository
 from app.modules.jobs.service import JobDiscoveryService
 from app.modules.matching.service import JobMatchingService
@@ -229,6 +230,16 @@ COPILOT_TOOL_SCHEMAS: list[dict[str, Any]] = [
         },
         required=["summary", "start_iso", "end_iso"],
     ),
+    _tool_def(
+        "list_interview_sessions",
+        "List the student's mock interview preparation sessions and scores.",
+        {"limit": {"type": "integer", "minimum": 1, "maximum": 20}},
+    ),
+    _tool_def(
+        "get_skill_gap_plan",
+        "Analyze skill gaps across job matches and mock interview feedback.",
+        {},
+    ),
 ]
 
 
@@ -282,6 +293,7 @@ class CopilotChatToolkit:
             vector_store=vector_store,
             embedding_client=embedding_client,
         )
+        self._interviews = InterviewService(session=session, settings=settings)
         self.created_approval_ids: list[str] = []
 
     async def execute(self, tool_name: str, arguments: dict[str, Any]) -> str:
@@ -299,6 +311,8 @@ class CopilotChatToolkit:
             "query_career_knowledge": self._query_career_knowledge,
             "list_calendar_events": self._list_calendar_events,
             "propose_calendar_event": self._propose_calendar_event,
+            "list_interview_sessions": self._list_interview_sessions,
+            "get_skill_gap_plan": self._get_skill_gap_plan,
         }
         handler = handlers.get(tool_name)
         if handler is None:
@@ -704,3 +718,13 @@ class CopilotChatToolkit:
             "timezone": tz,
             "message": "Calendar event prepared and awaiting user confirmation button click.",
         }
+
+    async def _list_interview_sessions(self, args: dict[str, Any]) -> dict[str, Any]:
+        res = await self._interviews.list_sessions(
+            user=self._user, limit=int(args.get("limit") or 10)
+        )
+        return res.model_dump(mode="json")
+
+    async def _get_skill_gap_plan(self, _args: dict[str, Any]) -> dict[str, Any]:
+        plan = await self._interviews.get_skill_gap_plan(user=self._user)
+        return plan.model_dump(mode="json")

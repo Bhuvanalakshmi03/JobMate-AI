@@ -9,6 +9,12 @@ from app.modules.authentication.models import OAuthState, User, UserSession
 from app.modules.calendar.models import GoogleCalendarConnection
 from app.modules.copilot.models import CopilotConversation, CopilotMessage
 from app.modules.documents.models import GeneratedDocument
+from app.modules.interviews.models import (
+    InterviewAnswer,
+    InterviewFeedback,
+    InterviewQuestion,
+    InterviewSession,
+)
 from app.modules.jobs.models import Job, SavedJob
 from app.modules.matching.models import JobMatch
 from app.modules.profile.models import UserProfile, UserSkill
@@ -35,4 +41,8 @@ __all__ = [
     "GoogleCalendarConnection",
     "CopilotConversation",
     "CopilotMessage",
+    "InterviewSession",
+    "InterviewQuestion",
+    "InterviewAnswer",
+    "InterviewFeedback",
 ]
