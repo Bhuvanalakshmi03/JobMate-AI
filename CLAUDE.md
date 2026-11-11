@@ -5,7 +5,7 @@ Primary specification: `docs/IMPLEMENTATION_SPEC.md`
 ## Core Architecture
 - Modular Monolithic Architecture with Multi-Agent Orchestration (LangGraph).
 - **Frontend:** `frontend/` — React + TypeScript + Vite + Tailwind CSS + React Router + TanStack Query.
-- **Backend:** `backend/app/` — FastAPI + SQLAlchemy 2.0 (async) + Alembic + PostgreSQL + Celery/Redis + ChromaDB + OpenAI + Adzuna.
+- **Backend:** `backend/app/` — FastAPI + SQLAlchemy 2.0 (async) + Alembic + PostgreSQL + Celery/Redis + ChromaDB + OpenAI (LLM, Embeddings, Web Search).
 - **Strict Separation:** Routers/schemas (`api/v1/`, `modules/*/router.py`) -> Domain services (`modules/*/service.py`) -> Repositories (`modules/*/repository.py`) -> Models (`models/`, `modules/*/models.py`) -> External adapters (`integrations/`).
 
 ## Non-Negotiable Constraints

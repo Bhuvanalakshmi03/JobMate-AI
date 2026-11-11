@@ -16,8 +16,9 @@ from app.main import create_app
 
 
 @pytest.fixture(autouse=True)
-def reset_settings_cache() -> None:
-    """Ensure Settings cache is isolated per test."""
+def reset_settings_cache(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Isolate Settings from local .env files and clear Settings cache per test."""
+    monkeypatch.setitem(Settings.model_config, "env_file", None)
     clear_settings_cache()
 
 

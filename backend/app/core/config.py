@@ -58,17 +58,12 @@ class Settings(BaseSettings):
     # Redis / Worker
     redis_url: str = Field(default="redis://localhost:6379/0", min_length=1)
 
-    # OpenAI
+    # OpenAI (LLM intelligence, embeddings, and web-search job discovery)
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
     openai_embedding_model: str = "text-embedding-3-small"
     openai_timeout_seconds: int = Field(default=30, ge=1, le=300)
     openai_max_tokens: int = Field(default=2048, ge=128, le=32768)
-
-    # Adzuna
-    adzuna_app_id: str = ""
-    adzuna_app_key: str = ""
-    adzuna_country: str = "us"
 
     # Google OAuth 2.0 / OIDC
     google_client_id: str = ""
