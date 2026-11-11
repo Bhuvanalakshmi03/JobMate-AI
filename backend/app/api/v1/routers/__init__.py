@@ -14,7 +14,9 @@ from app.modules.copilot.router import router as copilot_router
 from app.modules.documents.router import router as documents_router
 from app.modules.interviews.router import router as interviews_router
 from app.modules.jobs.router import router as jobs_router
+from app.modules.memory.router import router as memory_router
 from app.modules.profile.router import router as profile_router
+from app.modules.reminders.router import router as reminders_router
 from app.modules.resume.router import router as resume_router
 
 api_v1_router = APIRouter(prefix="/api/v1")
@@ -30,3 +32,5 @@ api_v1_router.include_router(approvals_router)
 api_v1_router.include_router(calendar_router)
 api_v1_router.include_router(copilot_router)
 api_v1_router.include_router(interviews_router)
+api_v1_router.include_router(memory_router)
+api_v1_router.include_router(reminders_router)

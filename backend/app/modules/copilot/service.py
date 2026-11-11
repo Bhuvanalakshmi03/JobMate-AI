@@ -38,6 +38,7 @@ from app.modules.copilot.schemas import (
 )
 from app.modules.copilot.toolkit import COPILOT_TOOL_SCHEMAS, CopilotChatToolkit
 from app.modules.documents.generator import DocumentGeneratorProtocol, OpenAIDocumentGenerator
+from app.modules.memory.service import CareerMemoryService
 from app.repositories.audit_repository import AuditLogRepository
 
 COPILOT_SYSTEM_PROMPT = """You are JobMate AI Co-Pilot, an intelligent placement & career guide.
@@ -209,12 +210,21 @@ class CopilotChatService:
         )
 
         cal_status = await self._calendar.get_status(user_id=user.id)
+        approved_memories = await CareerMemoryService(
+            self._session
+        ).load_approved_prompt_memories(user=user)
+        memory_block = (
+            "\nApproved Career Memory:\n- " + "\n- ".join(approved_memories)
+            if approved_memories
+            else ""
+        )
         system_context = (
             f"{COPILOT_SYSTEM_PROMPT}\n"
             f"Current UTC time: {datetime.now(UTC).isoformat()}\n"
             f"User name: {user.full_name} | Timezone: {user.timezone}\n"
             f"Google Calendar connected: {cal_status.connected} "
             f"({cal_status.google_email or 'not connected'})"
+            f"{memory_block}"
         )
         llm_messages: list[dict[str, Any]] = [{"role": "system", "content": system_context}]
         for item in prior_messages[-20:]:

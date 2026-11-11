@@ -36,10 +36,14 @@ from app.modules.interviews.service import InterviewService
 from app.modules.jobs.repository import JobRepository
 from app.modules.jobs.service import JobDiscoveryService
 from app.modules.matching.service import JobMatchingService
+from app.modules.memory.schemas import CareerMemoryCreateRequest
+from app.modules.memory.service import CareerMemoryService
 from app.modules.profile.repository import ProfileRepository, SkillRepository
 from app.modules.profile.schemas import ProfileUpdateRequest
 from app.modules.profile.service import ProfileService
 from app.modules.rag.service import RAGService
+from app.modules.reminders.schemas import ReminderCreateRequest
+from app.modules.reminders.service import ReminderService
 from app.modules.resume.repository import ResumeRepository
 
 
@@ -240,6 +244,46 @@ COPILOT_TOOL_SCHEMAS: list[dict[str, Any]] = [
         "Analyze skill gaps across job matches and mock interview feedback.",
         {},
     ),
+    _tool_def(
+        "list_career_memory",
+        "List user-approved Career Memory preferences, goals, and notes.",
+        {"approved_only": {"type": "boolean"}},
+    ),
+    _tool_def(
+        "save_career_memory",
+        "Save a persistent Career Memory note or preference when user consent is enabled.",
+        {
+            "category": {
+                "type": "string",
+                "enum": ["preference", "goal", "strength", "weakness", "note"],
+            },
+            "title": {"type": "string"},
+            "content": {"type": "string"},
+            "memory_key": {"type": "string"},
+        },
+        required=["title", "content"],
+    ),
+    _tool_def(
+        "list_reminders",
+        "List scheduled reminders and due in-app notifications.",
+        {"status": {"type": "string"}},
+    ),
+    _tool_def(
+        "schedule_reminder",
+        "Schedule a timezone-aware deduplicated reminder for a deadline or follow-up.",
+        {
+            "title": {"type": "string"},
+            "message": {"type": "string"},
+            "scheduled_for": {"type": "string", "description": "ISO-8601 timestamp"},
+            "reminder_type": {
+                "type": "string",
+                "enum": ["deadline", "follow_up", "interview", "study_plan", "custom"],
+            },
+            "dedup_key": {"type": "string"},
+            "timezone": {"type": "string"},
+        },
+        required=["title", "scheduled_for"],
+    ),
 ]
 
 
@@ -294,6 +338,8 @@ class CopilotChatToolkit:
             embedding_client=embedding_client,
         )
         self._interviews = InterviewService(session=session, settings=settings)
+        self._memory = CareerMemoryService(session)
+        self._reminders = ReminderService(session=session)
         self.created_approval_ids: list[str] = []
 
     async def execute(self, tool_name: str, arguments: dict[str, Any]) -> str:
@@ -313,6 +359,10 @@ class CopilotChatToolkit:
             "propose_calendar_event": self._propose_calendar_event,
             "list_interview_sessions": self._list_interview_sessions,
             "get_skill_gap_plan": self._get_skill_gap_plan,
+            "list_career_memory": self._list_career_memory,
+            "save_career_memory": self._save_career_memory,
+            "list_reminders": self._list_reminders,
+            "schedule_reminder": self._schedule_reminder,
         }
         handler = handlers.get(tool_name)
         if handler is None:
@@ -728,3 +778,43 @@ class CopilotChatToolkit:
     async def _get_skill_gap_plan(self, _args: dict[str, Any]) -> dict[str, Any]:
         plan = await self._interviews.get_skill_gap_plan(user=self._user)
         return plan.model_dump(mode="json")
+
+    async def _list_career_memory(self, args: dict[str, Any]) -> dict[str, Any]:
+        res = await self._memory.list_memories(
+            user=self._user, approved_only=bool(args.get("approved_only", False))
+        )
+        return res.model_dump(mode="json")
+
+    async def _save_career_memory(self, args: dict[str, Any]) -> dict[str, Any]:
+        entry = await self._memory.create_memory(
+            user=self._user,
+            payload=CareerMemoryCreateRequest(
+                category=args.get("category") or "note",
+                title=str(args["title"]),
+                content=str(args["content"]),
+                source="copilot_proposed",
+                memory_key=args.get("memory_key"),
+            ),
+        )
+        return entry.model_dump(mode="json")
+
+    async def _list_reminders(self, args: dict[str, Any]) -> dict[str, Any]:
+        res = await self._reminders.list_reminders(
+            user=self._user, status=args.get("status")
+        )
+        return res.model_dump(mode="json")
+
+    async def _schedule_reminder(self, args: dict[str, Any]) -> dict[str, Any]:
+        dt = datetime.fromisoformat(str(args["scheduled_for"]).replace("Z", "+00:00"))
+        created = await self._reminders.create_reminder(
+            user=self._user,
+            payload=ReminderCreateRequest(
+                title=str(args["title"]),
+                message=args.get("message"),
+                reminder_type=args.get("reminder_type") or "custom",
+                dedup_key=args.get("dedup_key"),
+                scheduled_for=dt,
+                timezone=args.get("timezone") or self._user.timezone,
+            ),
+        )
+        return created.model_dump(mode="json")

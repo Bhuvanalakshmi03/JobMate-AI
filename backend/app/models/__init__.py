@@ -17,7 +17,9 @@ from app.modules.interviews.models import (
 )
 from app.modules.jobs.models import Job, SavedJob
 from app.modules.matching.models import JobMatch
+from app.modules.memory.models import CareerMemory
 from app.modules.profile.models import UserProfile, UserSkill
+from app.modules.reminders.models import Reminder
 from app.modules.resume.models import Resume, ResumeFact
 
 __all__ = [
@@ -45,4 +47,6 @@ __all__ = [
     "InterviewQuestion",
     "InterviewAnswer",
     "InterviewFeedback",
+    "CareerMemory",
+    "Reminder",
 ]

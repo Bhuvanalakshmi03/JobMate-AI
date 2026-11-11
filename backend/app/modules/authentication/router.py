@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from fastapi import APIRouter, Query, Request, Response, status
 from fastapi.responses import RedirectResponse
 
 from app.core.config import Settings
-from app.core.dependencies import SettingsDep
+from app.core.dependencies import DBSessionDep, SettingsDep
 from app.modules.authentication.dependencies import AuthServiceDep, CurrentAuthDep
+from app.modules.authentication.lifecycle import delete_user_account, export_user_data
 from app.modules.authentication.schemas import (
     AuthConfigResponse,
     AuthSessionResponse,
@@ -183,4 +184,32 @@ async def get_current_user_info(auth_ctx: CurrentAuthDep) -> UserResponse:
         created_at=user.created_at,
         is_demo_auth=auth_ctx.is_demo_auth,
     )
+
+
+@router.get(
+    "/export",
+    summary="Export all personal career data for the authenticated user",
+)
+async def export_my_account_data(
+    auth_ctx: CurrentAuthDep,
+    session: DBSessionDep,
+) -> dict[str, Any]:
+    """Return complete user-scoped career data snapshot without exposing internal secrets."""
+    return await export_user_data(session=session, user=auth_ctx.user)
+
+
+@router.delete(
+    "/account",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Permanently delete the authenticated user account and all personal data",
+)
+async def delete_my_account(
+    response: Response,
+    auth_ctx: CurrentAuthDep,
+    session: DBSessionDep,
+    settings: SettingsDep,
+) -> None:
+    """Delete private files, revoke session cookie, and cascade-delete user record."""
+    await delete_user_account(session=session, settings=settings, user=auth_ctx.user)
+    _clear_session_cookie(response, settings)
 
