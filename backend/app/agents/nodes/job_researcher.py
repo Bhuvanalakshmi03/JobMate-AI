@@ -9,14 +9,36 @@ from app.agents.state import AgentNodeProtocol, CareerPilotAgentState
 from app.agents.tools.registry import AgentToolset
 
 
+def _derive_search_query(
+    *,
+    search_query: str | None,
+    profile: dict[str, Any],
+    requested_task: str,
+) -> str:
+    if search_query and search_query.strip():
+        return search_query.strip()
+    roles = profile.get("target_roles") or []
+    if roles:
+        return str(roles[0])
+    skills = profile.get("verified_skill_names") or []
+    lowered = requested_task.lower()
+    role_hints = ("engineer", "developer", "intern", "analyst", "scientist", "designer", "manager")
+    if any(hint in lowered for hint in role_hints):
+        return requested_task
+    if skills:
+        return f"{' '.join(str(s) for s in skills[:3])} engineer"
+    return "software engineer intern"
+
+
 def make_job_researcher_node(toolset: AgentToolset) -> AgentNodeProtocol:
     async def job_researcher(state: CareerPilotAgentState) -> dict[str, Any]:
         async def _op() -> dict[str, Any]:
             profile = state.get("verified_profile_ref") or {}
-            roles = profile.get("target_roles") or []
             locs = profile.get("preferred_locations") or []
-            query = state.get("search_query") or (
-                str(roles[0]) if roles else state["requested_task"]
+            query = _derive_search_query(
+                search_query=state.get("search_query"),
+                profile=profile,
+                requested_task=state["requested_task"],
             )
             location = state.get("search_location") or (str(locs[0]) if locs else None)
             return await toolset.search_jobs(query=query, location=location, limit=5)

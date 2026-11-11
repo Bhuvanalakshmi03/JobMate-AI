@@ -24,7 +24,7 @@ export const resumeService = {
       `/resumes/${resumeId}/analyze${force ? "?force=true" : ""}`,
       {
         method: "POST",
-        timeoutMs: 60000,
+        timeoutMs: 120000,
       }
     ),
 

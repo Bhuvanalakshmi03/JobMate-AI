@@ -45,6 +45,11 @@ class ExtractedFactCandidate(BaseModel):
             raise ValueError("Fact title cannot be empty")
         return cleaned
 
+    @field_validator("structured_data", mode="before")
+    @classmethod
+    def coerce_null_structured_data(cls, value: object) -> object:
+        return {} if value is None else value
+
 
 class ExtractedResumePayload(BaseModel):
     """Validated JSON structure returned by the Resume Analyst Agent."""

@@ -14,7 +14,7 @@ export const documentService = {
   }): Promise<GeneratedDocument> =>
     apiRequest<GeneratedDocument>("/documents/tailor-resume", {
       method: "POST",
-      timeoutMs: 60000,
+      timeoutMs: 120000,
       body: JSON.stringify(params),
     }),
 
@@ -26,7 +26,7 @@ export const documentService = {
   }): Promise<GeneratedDocument> =>
     apiRequest<GeneratedDocument>("/documents/cover-letter", {
       method: "POST",
-      timeoutMs: 60000,
+      timeoutMs: 120000,
       body: JSON.stringify(params),
     }),
 

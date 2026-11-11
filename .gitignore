@@ -29,8 +29,9 @@ frontend/*.tsbuildinfo
 npm-debug.log*
 
 # Local runtime data & storage
-/storage/
-/uploads/
+storage/
+backend/storage/
+uploads/
 *.db
 *.sqlite
 *.sqlite3

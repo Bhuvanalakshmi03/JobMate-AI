@@ -26,15 +26,32 @@ export function ResumeAnalysisPage() {
   const pendingFacts = facts.filter((f) => f.verification_status === "pending");
 
   const handleFactAction = async (patch: FactPatchItem) => {
-    await patchMutation.mutateAsync({ updates: [patch], syncToProfile });
+    try {
+      await patchMutation.mutateAsync({ updates: [patch], syncToProfile });
+    } catch {
+      // Displayed via patchMutation.error
+    }
   };
 
   const handleVerifyAllPending = async () => {
     if (pendingFacts.length === 0) return;
-    await patchMutation.mutateAsync({
-      updates: pendingFacts.map((f) => ({ fact_id: f.id, action: "verify" })),
-      syncToProfile,
-    });
+    try {
+      await patchMutation.mutateAsync({
+        updates: pendingFacts.map((f) => ({ fact_id: f.id, action: "verify" })),
+        syncToProfile,
+      });
+    } catch {
+      // Displayed via patchMutation.error
+    }
+  };
+
+  const handleRerunAnalysis = async () => {
+    if (!resumeId) return;
+    try {
+      await analyzeMutation.mutateAsync({ resumeId, force: true });
+    } catch {
+      // Displayed via analyzeMutation.error
+    }
   };
 
   return (
@@ -56,7 +73,7 @@ export function ResumeAnalysisPage() {
         <button
           type="button"
           disabled={analyzeMutation.isPending || !resumeId}
-          onClick={() => void analyzeMutation.mutateAsync({ resumeId, force: true })}
+          onClick={() => void handleRerunAnalysis()}
           className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
         >
           <Sparkles className="h-4 w-4 text-indigo-600" aria-hidden="true" />

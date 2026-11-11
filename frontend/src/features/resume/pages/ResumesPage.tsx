@@ -1,6 +1,6 @@
 import { FileText, Sparkles, Trash2, Upload } from "lucide-react";
 import { useState, type ChangeEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { Card } from "../../../components/ui/Card";
 import { StateNotice } from "../../../components/ui/StateNotice";
@@ -22,6 +22,7 @@ function parseTone(status: string): "success" | "warning" | "danger" | "info" | 
 }
 
 export function ResumesPage() {
+  const navigate = useNavigate();
   const listQuery = useResumesList();
   const uploadMutation = useUploadResumeMutation();
   const analyzeMutation = useAnalyzeResumeMutation();
@@ -65,16 +66,31 @@ export function ResumesPage() {
       return;
     }
     setValidationError(null);
-    await uploadMutation.mutateAsync(selectedFile);
-    setSelectedFile(null);
+    try {
+      await uploadMutation.mutateAsync(selectedFile);
+      setSelectedFile(null);
+    } catch {
+      // Displayed via uploadMutation.error
+    }
   };
 
   const handleAnalyze = async (resumeId: string) => {
     setAnalyzingId(resumeId);
     try {
       await analyzeMutation.mutateAsync({ resumeId });
+      navigate(`/resumes/${resumeId}`);
+    } catch {
+      // Displayed via analyzeMutation.error
     } finally {
       setAnalyzingId(null);
+    }
+  };
+
+  const handleDelete = async (resumeId: string) => {
+    try {
+      await deleteMutation.mutateAsync(resumeId);
+    } catch {
+      // Displayed cleanly in UI
     }
   };
 
@@ -155,6 +171,16 @@ export function ResumesPage() {
           />
         )}
 
+        {analyzingId && (
+          <div className="mb-4">
+            <StateNotice
+              title="Analyzing resume with AI..."
+              description="Extracting structured skills, experience, education, and project facts. This usually takes 10–30 seconds."
+              tone="info"
+            />
+          </div>
+        )}
+
         {analyzeMutation.error && (
           <div className="mb-4">
             <StateNotice
@@ -212,19 +238,25 @@ export function ResumesPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={analyzingId === resume.id}
-                    onClick={() => void handleAnalyze(resume.id)}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
-                  >
-                    <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-                    {analyzingId === resume.id
-                      ? "Analyzing..."
-                      : resume.parse_status === "analyzed"
-                        ? "View Analysis"
-                        : "Analyze with AI"}
-                  </button>
+                  {resume.parse_status === "analyzed" ? (
+                    <Link
+                      to={`/resumes/${resume.id}`}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                      View Analysis
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={analyzingId === resume.id}
+                      onClick={() => void handleAnalyze(resume.id)}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                      {analyzingId === resume.id ? "Analyzing..." : "Analyze with AI"}
+                    </button>
+                  )}
                   <Link
                     to={`/resumes/${resume.id}`}
                     className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
@@ -235,7 +267,7 @@ export function ResumesPage() {
                     type="button"
                     aria-label={`Delete ${resume.original_filename}`}
                     disabled={deleteMutation.isPending}
-                    onClick={() => void deleteMutation.mutateAsync(resume.id)}
+                    onClick={() => void handleDelete(resume.id)}
                     className="rounded-lg border border-rose-200 bg-rose-50 p-1.5 text-rose-700 hover:bg-rose-100 disabled:opacity-50"
                   >
                     <Trash2 className="h-4 w-4" aria-hidden="true" />

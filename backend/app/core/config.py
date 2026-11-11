@@ -62,8 +62,8 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
     openai_embedding_model: str = "text-embedding-3-small"
-    openai_timeout_seconds: int = Field(default=30, ge=1, le=300)
-    openai_max_tokens: int = Field(default=2048, ge=128, le=32768)
+    openai_timeout_seconds: int = Field(default=90, ge=1, le=300)
+    openai_max_tokens: int = Field(default=4096, ge=128, le=32768)
 
     # Google OAuth 2.0 / OIDC
     google_client_id: str = ""

@@ -11,7 +11,7 @@ export const agentService = {
   startWorkflow: (payload: WorkflowCreatePayload): Promise<WorkflowRun> =>
     apiRequest<WorkflowRun>("/agents/workflows", {
       method: "POST",
-      timeoutMs: 60000,
+      timeoutMs: 120000,
       body: JSON.stringify(payload),
     }),
 
@@ -24,7 +24,7 @@ export const agentService = {
   syncRag: (): Promise<RAGSyncResponse> =>
     apiRequest<RAGSyncResponse>("/agents/rag/sync", {
       method: "POST",
-      timeoutMs: 45000,
+      timeoutMs: 90000,
     }),
 
   queryRag: (params: { query: string; top_k?: number }): Promise<RAGQueryResponse> =>

@@ -24,7 +24,7 @@ function buildSearchQueryString(params: JobSearchParams): string {
 export const jobService = {
   searchJobs: (params: JobSearchParams): Promise<JobSearchResponse> =>
     apiRequest<JobSearchResponse>(`/jobs/search${buildSearchQueryString(params)}`, {
-      timeoutMs: 60000,
+      timeoutMs: 90000,
     }),
 
   getRecommended: (limit = 20): Promise<RecommendedJobsResponse> =>

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Protocol
@@ -12,7 +11,7 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, Field, ValidationError
 
 from app.core.exceptions import ExternalServiceError
-from app.integrations.openai.client import WebSearchLLMProtocol
+from app.integrations.openai.client import WebSearchLLMProtocol, extract_json_object_text
 
 _BLOCKED_PLACEHOLDER_HOSTS = frozenset(
     {"example.com", "www.example.com", "example.org", "localhost", "127.0.0.1"}
@@ -173,9 +172,7 @@ class OpenAIWebSearchJobProvider:
             user_prompt=user_prompt,
         )
 
-        raw_text = completion.content.strip()
-        if raw_text.startswith("```"):
-            raw_text = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_text, flags=re.DOTALL).strip()
+        raw_text = extract_json_object_text(completion.content)
 
         try:
             parsed_json = json.loads(raw_text)

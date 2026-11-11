@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ResumesPage } from "../src/features/resume/pages/ResumesPage";
 import { resumeService } from "../src/services/resume-service";
@@ -12,14 +12,21 @@ function renderResumesPage() {
   });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
-        <ResumesPage />
+      <MemoryRouter initialEntries={["/resumes"]}>
+        <Routes>
+          <Route path="/resumes" element={<ResumesPage />} />
+          <Route path="/resumes/:resumeId" element={<div>Analysis Target</div>} />
+        </Routes>
       </MemoryRouter>
     </QueryClientProvider>
   );
 }
 
 describe("ResumesPage", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("shows empty state, rejects unsupported files, and uploads a valid PDF", async () => {
     vi.spyOn(resumeService, "listResumes").mockResolvedValue({ items: [], total: 0 });
     const uploadSpy = vi.spyOn(resumeService, "uploadResume").mockResolvedValue({
@@ -53,6 +60,50 @@ describe("ResumesPage", () => {
     await waitFor(() => {
       expect(uploadSpy).toHaveBeenCalledWith(pdfFile);
       expect(screen.getByText("Resume uploaded and parsed")).toBeInTheDocument();
+    });
+  });
+
+  it("resets analyzing button on failure and navigates on success", async () => {
+    const resumeSummary = {
+      id: "res-1",
+      original_filename: "student.pdf",
+      content_type: "application/pdf",
+      file_extension: "pdf",
+      file_size_bytes: 2048,
+      page_count: 2,
+      parse_status: "parsed" as const,
+      created_at: "2026-11-11T12:00:00Z",
+      updated_at: "2026-11-11T12:00:00Z",
+    };
+    vi.spyOn(resumeService, "listResumes").mockResolvedValue({
+      items: [resumeSummary],
+      total: 1,
+    });
+    const analyzeSpy = vi
+      .spyOn(resumeService, "analyzeResume")
+      .mockRejectedValueOnce(new Error("AI analysis timed out"))
+      .mockResolvedValueOnce({
+        resume: { ...resumeSummary, parse_status: "analyzed" },
+        facts: [],
+        completeness_score: 80,
+      });
+
+    renderResumesPage();
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Analyze with AI" })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Analyze with AI" }));
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent("AI analysis timed out");
+      expect(screen.getByRole("button", { name: "Analyze with AI" })).toBeEnabled();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Analyze with AI" }));
+    await waitFor(() => {
+      expect(analyzeSpy).toHaveBeenCalledTimes(2);
+      expect(screen.getByText("Analysis Target")).toBeInTheDocument();
     });
   });
 });

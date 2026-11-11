@@ -216,13 +216,13 @@ export function AgentCopilotPage() {
                 </div>
               </div>
 
-              {(taskType === "job_discovery" || taskType === "auto") && (
+              {!jobId && taskType !== "career_advisory" && (
                 <div>
                   <label
                     htmlFor="copilot-search-query"
                     className="block text-xs font-medium text-slate-700"
                   >
-                    Job Search Query Override (optional)
+                    Job Search Query Override (optional — used if no target job is selected)
                   </label>
                   <input
                     id="copilot-search-query"

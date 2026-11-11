@@ -8,6 +8,7 @@ import re
 from pydantic import ValidationError as PydanticValidationError
 
 from app.core.exceptions import ExternalServiceError
+from app.integrations.openai.client import extract_json_object_text
 from app.modules.resume.schemas import ExtractedFactCandidate, ExtractedResumePayload
 
 _WHITESPACE_RE = re.compile(r"\s+")
@@ -36,9 +37,7 @@ class ResumeExtractionValidator:
     """Validates raw LLM JSON and checks factual grounding against source resume text."""
 
     def validate(self, *, raw_json: str, source_text: str) -> ExtractedResumePayload:
-        cleaned = raw_json.strip()
-        if cleaned.startswith("```"):
-            cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", cleaned, flags=re.DOTALL).strip()
+        cleaned = extract_json_object_text(raw_json)
 
         try:
             parsed_raw = json.loads(cleaned)

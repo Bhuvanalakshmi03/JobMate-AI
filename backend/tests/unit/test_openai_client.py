@@ -11,7 +11,7 @@ from openai import APITimeoutError, RateLimitError
 from app.core.config import Settings
 from app.core.exceptions import ConfigurationError, ExternalServiceError
 from app.core.exceptions import RateLimitError as AppRateLimitError
-from app.integrations.openai.client import OpenAIChatClient
+from app.integrations.openai.client import OpenAIChatClient, extract_json_object_text
 
 
 async def test_openai_client_requires_api_key() -> None:
@@ -73,8 +73,10 @@ async def test_openai_client_handles_quota_and_timeout_errors(
 async def test_openai_client_web_search_and_embeddings() -> None:
     client = OpenAIChatClient(Settings(openai_api_key="sk-test-key"), max_retries=0)
     assert client._client is not None
+    captured_kwargs: dict[str, object] = {}
 
-    async def fake_responses_create(**_kwargs: object) -> object:
+    async def fake_responses_create(**kwargs: object) -> object:
+        captured_kwargs.update(kwargs)
         return SimpleNamespace(
             model="gpt-4o-mini",
             output_text='{"jobs": []}',
@@ -102,8 +104,16 @@ async def test_openai_client_web_search_and_embeddings() -> None:
     client._client.embeddings.create = fake_embeddings_create  # type: ignore[method-assign]
 
     search_res = await client.web_search_json(system_prompt="sys", user_prompt="find jobs")
+    assert "text" not in captured_kwargs
     assert search_res.content == '{"jobs": []}'
     assert search_res.citations == ("https://careers.example.io/job/1",)
 
     vectors = await client.embed_texts(["first", "second"])
     assert vectors == [[0.9, 0.1], [0.2, 0.8]]
+
+
+def test_extract_json_object_text_handles_prose_and_fences() -> None:
+    wrapped = 'Here are results:\n```json\n{"jobs": [{"title": "Dev"}]}\n```\nSources attached.'
+    assert extract_json_object_text(wrapped) == '{"jobs": [{"title": "Dev"}]}'
+    inline = 'Result: {"ok": true, "count": 2} end'
+    assert extract_json_object_text(inline) == '{"ok": true, "count": 2}'

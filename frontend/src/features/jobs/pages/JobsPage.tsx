@@ -29,11 +29,18 @@ export function JobsPage() {
 
   const handleCalculateMatch = (jobId: string) => {
     setMatchingJobId(jobId);
-    void matchMutation.mutateAsync(jobId).finally(() => setMatchingJobId(null));
+    void matchMutation
+      .mutateAsync(jobId)
+      .catch(() => {
+        // Displayed via matchMutation.error
+      })
+      .finally(() => setMatchingJobId(null));
   };
 
   const handleToggleSave = (jobId: string, isSaved: boolean) => {
-    void saveMutation.mutateAsync({ jobId, isSaved });
+    void saveMutation.mutateAsync({ jobId, isSaved }).catch(() => {
+      // Displayed via saveMutation.error
+    });
   };
 
   return (
@@ -93,6 +100,22 @@ export function JobsPage() {
             <StateNotice
               title="Job search failed"
               description={searchQuery.error.message}
+              tone="error"
+            />
+          )}
+
+          {matchMutation.error && (
+            <StateNotice
+              title="Match scoring failed"
+              description={matchMutation.error.message}
+              tone="error"
+            />
+          )}
+
+          {saveMutation.error && (
+            <StateNotice
+              title="Could not update saved jobs"
+              description={saveMutation.error.message}
               tone="error"
             />
           )}
